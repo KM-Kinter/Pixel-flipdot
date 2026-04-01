@@ -37,11 +37,23 @@ void setup() {
 
   Serial.println("WiFi Connected!");
   timeClient.begin();
+  timeClient.forceUpdate();
+  
+  // Clear Page 1 (to remove residual text)
+  // Serial.println("Clearing Page 1...");
+  // Pixel_GFX.selectBuffer(0);
+  // Pixel_GFX.fillScreen(0);
+  // Pixel_GFX.commitBufferToPage(1); 
+  
   delay(1000);
 }
 
 void loop() {
-  timeClient.update();
+  static uint32_t lastNTP = 0;
+  if (millis() - lastNTP > 300000) { // Update NTP every 5 minutes
+    lastNTP = millis();
+    timeClient.forceUpdate();
+  }
   time_t now = timeClient.getEpochTime();
   struct tm * timeinfo = localtime(&now);
 
