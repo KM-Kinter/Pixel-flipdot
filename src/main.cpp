@@ -30,8 +30,9 @@ bool showWeather = true;
 bool showAnalogClock = true;
 bool showCombine = true;
 bool showDrawing = true;
+bool systemOn = true;
 int rotationSpeed = 20; 
-uint16_t drawBoard[84]; // Persistent 84x16 drawing
+uint16_t drawBoard[84]; 
 bool forceRefresh = false;
 
 WeatherData currentWeather = {0, 0, false};
@@ -82,6 +83,7 @@ void saveConfig() {
     f.println(showAnalogClock);
     f.println(showCombine);
     f.println(showDrawing);
+    f.println(systemOn);
     f.println(rotationSpeed);
     for (int i = 0; i < 84; i++) f.println(drawBoard[i]);
     for (const String& s : playlist) {
@@ -103,6 +105,7 @@ void loadConfig() {
       showAnalogClock = f.readStringUntil('\n').toInt();
       showCombine = f.readStringUntil('\n').toInt();
       showDrawing = f.readStringUntil('\n').toInt();
+      systemOn = f.readStringUntil('\n').toInt();
       String rotStr = f.readStringUntil('\n');
       rotStr.trim();
       if (rotStr.length() > 0) rotationSpeed = rotStr.toInt();
@@ -256,7 +259,10 @@ void setup() {
                   " <div class='container'>"
                   
                   " <h1>Smart Flipdot</h1>"
-                  " <div class='subtitle'>Pixel v4.7 | <a href='http://flipdot.local'>flipdot.local</a></div>"
+                  " <div class='subtitle'>Pixel v4.8 | <a href='http://flipdot.local'>flipdot.local</a></div>"
+                  " <div style='display:flex; justify-content:center; margin-bottom:20px;'>"
+                  "  <button type='button' class='btn " + String(systemOn?"btn-green":"btn-red") + "' style='width:auto; padding:8px 20px; font-size:0.9em' onclick='togglePower()'>" + (systemOn?"SYSTEM ON":"SYSTEM OFF") + "</button>"
+                  " </div>"
                   " <form action='/save' method='POST' id='mainForm'>"
                   " <div class='section-title'>Control Panel</div>"
                   " <div class='tile-grid'>"
@@ -373,7 +379,8 @@ void setup() {
                   "function addMsg(){const i=document.getElementById('newMsg');if(i.value){playlist.push(i.value);i.value='';render();}}"
                   "function delMsg(i){playlist.splice(i,1);render();}"
                   "document.getElementById('newMsg').addEventListener('keypress',(e)=>{if(e.key==='Enter'){e.preventDefault();addMsg();}});"
-                  "window.addEventListener('load',()=>{loadGallery();initBoard();render();});"
+                  "function togglePower(){const n=! " + String(systemOn?"true":"false") + "; fetch('/api/power?on='+(n?1:0)).then(()=>location.reload());}"
+"window.addEventListener('load',()=>{loadGallery();initBoard();render();});"
                   "</script></body></html>";
     request->send(200, "text/html", html);
   });
@@ -507,6 +514,17 @@ void setup() {
     }
   });
 
+  server.on("/api/power", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("on")) {
+        systemOn = request->getParam("on")->value().toInt();
+        saveConfig();
+        forceRefresh = true;
+        request->send(200, "text/plain", "OK");
+    } else {
+        request->send(400, "text/plain", "Bad Request");
+    }
+  });
+
   server.begin();
   Serial.println("Web Server running.");
 }
@@ -530,7 +548,31 @@ void loop() {
   static uint32_t lastToggle = 0;
   static int masterIdx = 0; 
   
-  if (millis() - lastToggle > (rotationSpeed * 1000) || forceRefresh) {
+  int h = timeinfo->tm_hour;
+  int m = timeinfo->tm_min;
+
+  if (!systemOn) { forceRefresh = false; return; }
+
+  // Schedules
+  int currentInterval = rotationSpeed * 1000;
+  bool night = (h >= 22 || h < 5);
+  bool morningStatic = (h >= 5 && h < 7);
+  bool morningRotate = (h == 7 && m < 15);
+
+  if (night || morningStatic) {
+    if (millis() - lastToggle > 60000 || forceRefresh) { 
+      lastToggle = millis(); forceRefresh = false;
+      Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
+      u8g2_gfx.setFont(u8g2_font_unifont_t_polish);
+      drawUTF8Centered(night ? "Goodnight!" : "Morning!", 13);
+      Pixel_GFX.commitBufferToPage(0);
+    }
+    return;
+  }
+
+  if (morningRotate) currentInterval = 30000;
+
+  if (millis() - lastToggle > currentInterval || forceRefresh) {
     lastToggle = millis();
     forceRefresh = false;
 
@@ -538,115 +580,64 @@ void loop() {
     int attempts = 0;
     while (attempts < 20) {
         masterIdx = (masterIdx + 1) % (6 + playlist.size());
+        if (morningRotate) { // Overrule rotation
+           static int rotatePart = 0;
+           rotatePart = (rotatePart + 1) % 3;
+           if (rotatePart == 0) { u8g2_gfx.setFont(FONT_TEXT); toShow = "Morning!"; break; }
+           if (rotatePart == 1) { u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; break; }
+           if (rotatePart == 2) { u8g2_gfx.setFont(FONT_DATE); toShow = dateStr; break; }
+        }
         
-        if (masterIdx == 0 && showClock) { 
-            u8g2_gfx.setFont(FONT_CLOCK);
-            toShow = timeStr; break; 
-        }
-        if (masterIdx == 1 && showDate) { 
-            u8g2_gfx.setFont(FONT_DATE);
-            toShow = dateStr; break; 
-        }
-        if (masterIdx == 2 && showWeather && currentWeather.valid) {
-            // Weather screen handled specially
-            break;
-        }
-        if (masterIdx == 3 && showAnalogClock) {
-            // Analog clock handled specially
-            break;
-        }
-        if (masterIdx == 4 && showCombine) {
-            // Combine mode handled specially
-            break;
-        }
-        if (masterIdx == 5 && showDrawing) {
-            // Drawing screen
-            break;
-        }
+        if (masterIdx == 0 && showClock) { u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; break; }
+        if (masterIdx == 1 && showDate) { u8g2_gfx.setFont(FONT_DATE); toShow = dateStr; break; }
+        if (masterIdx == 2 && showWeather && currentWeather.valid) break;
+        if (masterIdx == 3 && showAnalogClock) break;
+        if (masterIdx == 4 && showCombine) break;
+        if (masterIdx == 5 && showDrawing) break;
         if (masterIdx >= 6 && showCustom) {
             int pIdx = masterIdx - 6;
             if (pIdx >= 0 && pIdx < (int)playlist.size()) { 
-                u8g2_gfx.setFont(FONT_TEXT);
-                toShow = playlist[pIdx]; break; 
+                u8g2_gfx.setFont(FONT_TEXT); toShow = playlist[pIdx]; break; 
             }
         }
         attempts++;
     }
 
     if (masterIdx == 2 && showWeather && currentWeather.valid) {
-        Serial.println("Updating display: Weather");
-        Pixel_GFX.selectBuffer(0);
-        Pixel_GFX.fillScreen(0);
-        
+        Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
         const uint8_t* icon = WeatherHelper::getIconForCode(currentWeather.code, currentWeather.is_day, currentWeather.wind_speed);
         Pixel_GFX.drawXBitmap(0, 0, icon, 16, 16, 1);
-        
         u8g2_gfx.setFont(u8g2_font_unifont_t_polish);
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%.1f", currentWeather.temp);
+        char buf[16]; snprintf(buf, sizeof(buf), "%.1f", currentWeather.temp);
         String tNum = String(buf);
         int wNum = u8g2_gfx.getUTF8Width(tNum.c_str());
         int wC = u8g2_gfx.getUTF8Width("C");
-        int totalW = wNum + 5 + wC; // 5 = gap(1) + circle(3) + gap(1)
-        
-        int startX = 83 - totalW; // Leaves 1px empty on the right (pixel 83)
-        
-        u8g2_gfx.setCursor(startX, 13); 
-        u8g2_gfx.print(tNum);
-        
-        int degX = startX + wNum + 1;
-        Pixel_GFX.drawCircle(degX + 1, 3, 1, 1);
-        u8g2_gfx.setCursor(degX + 4, 13);
-        u8g2_gfx.print("C");
-        
+        int startX = 83 - (wNum + 5 + wC);
+        u8g2_gfx.setCursor(startX, 13); u8g2_gfx.print(tNum);
+        Pixel_GFX.drawCircle(startX + wNum + 2, 3, 1, 1);
+        u8g2_gfx.setCursor(startX + wNum + 5, 13); u8g2_gfx.print("C");
         Pixel_GFX.commitBufferToPage(0);
-        delay(200);
     } else if (masterIdx == 3 && showAnalogClock) {
-        Serial.println("Updating display: Analog Clock");
-        Pixel_GFX.selectBuffer(0);
-        Pixel_GFX.fillScreen(0);
+        Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
         drawAnalogClock(timeinfo->tm_hour, timeinfo->tm_min);
         Pixel_GFX.commitBufferToPage(0);
-        delay(200);
     } else if (masterIdx == 4 && showCombine) {
-        Serial.println("Updating display: Combine");
-        Pixel_GFX.selectBuffer(0);
-        Pixel_GFX.fillScreen(0);
-        
+        Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
         u8g2_gfx.setFont(FONT_CLOCK);
         int wDig = u8g2_gfx.getUTF8Width(timeStr);
-        int totalW = 14 + 4 + wDig; // Analog(14) + Gap(4) + Digital
-        int startX = (84 - totalW) / 2;
-        
-        // Draw Analog on Left
+        int startX = (84 - (14 + 4 + wDig)) / 2;
         drawAnalogClock(timeinfo->tm_hour, timeinfo->tm_min, startX + 7, 8);
-        
-        // Draw Digital on Right
-        u8g2_gfx.setCursor(startX + 14 + 4, 16);
-        u8g2_gfx.print(timeStr);
-        
+        u8g2_gfx.setCursor(startX + 18, 16); u8g2_gfx.print(timeStr);
         Pixel_GFX.commitBufferToPage(0);
-        delay(200);
     } else if (masterIdx == 5 && showDrawing) {
-        // Just draw the board
-        Pixel_GFX.selectBuffer(0);
-        Pixel_GFX.fillScreen(0);
-        for(int x=0; x<84; x++) {
-            for(int y=0; y<16; y++) {
-                if (drawBoard[x] & (1 << y)) Pixel_GFX.drawPixel(x, y, 1);
-            }
-        }
+        Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
+        for(int x=0; x<84; x++) for(int y=0; y<16; y++) if (drawBoard[x] & (1 << y)) Pixel_GFX.drawPixel(x, y, 1);
         Pixel_GFX.commitBufferToPage(0);
-        delay(500); 
     } else if (toShow != "") {
-      Serial.println("Updating display: " + toShow);
-      Pixel_GFX.selectBuffer(0);
-      Pixel_GFX.fillScreen(0);
-      // yPos: 16 for large fonts (fills rows 0-15), 14 for narrow text (baseline)
+      Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
       int yPos = (u8g2_gfx.getFontAscent() > 13 ? 16 : 14);
       drawUTF8Centered(toShow, yPos);
       Pixel_GFX.commitBufferToPage(0);
-      delay(200); 
     }
   }
 }
