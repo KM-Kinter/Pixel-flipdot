@@ -428,13 +428,14 @@ void loop() {
         Pixel_GFX.commitBufferToPage(0);
         delay(200);
     } else if (masterIdx == 5 && showGoL) {
-        if (millis() - lastAnim > 500) {
+        if (millis() - lastAnim > 1500) {
             lastAnim = millis();
             Serial.println("Updating display: Game of Life");
             Pixel_GFX.selectBuffer(0);
             Pixel_GFX.fillScreen(0);
             gol.render(Pixel_GFX);
-            Pixel_GFX.commitBufferToPage(0);
+            uint8_t res = Pixel_GFX.commitBufferToPage(0);
+            if (res != 0) Serial.printf("GoL Commit Error: 0x%02X\n", res);
             gol.update();
         }
     } else if (toShow != "") {

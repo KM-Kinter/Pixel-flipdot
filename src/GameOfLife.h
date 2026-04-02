@@ -15,10 +15,19 @@ public:
     int generationCount = 0;
 
     void init() {
-        randomSeed(analogRead(0) + millis());
+        randomSeed(esp_random());
         for (int x = 0; x < WIDTH; x++) {
             for (int y = 0; y < HEIGHT; y++) {
-                grid[x][y] = (random(100) < 30) ? 1 : 0;
+                // Higher density (45%) and some clumping
+                if (random(100) < 45) {
+                    grid[x][y] = 1;
+                    // Clumping: occasional 2x2 blocks
+                    if (random(100) < 10 && x < WIDTH-1 && y < HEIGHT-1) {
+                        grid[x+1][y] = 1; grid[x][y+1] = 1; grid[x+1][y+1] = 1;
+                    }
+                } else {
+                    grid[x][y] = 0;
+                }
             }
         }
         generationCount = 0;
