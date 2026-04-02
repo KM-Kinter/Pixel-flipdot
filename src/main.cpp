@@ -29,7 +29,9 @@ bool showCustom = true;
 bool showWeather = true;
 bool showAnalogClock = true;
 bool showCombine = true;
+bool showDrawing = true;
 int rotationSpeed = 20; 
+uint16_t drawBoard[84]; // Persistent 84x16 drawing
 bool forceRefresh = false;
 
 WeatherData currentWeather = {0, 0, false};
@@ -79,7 +81,9 @@ void saveConfig() {
     f.println(showWeather);
     f.println(showAnalogClock);
     f.println(showCombine);
+    f.println(showDrawing);
     f.println(rotationSpeed);
+    for (int i = 0; i < 84; i++) f.println(drawBoard[i]);
     for (const String& s : playlist) {
       if (s.length() > 0) f.println(s);
     }
@@ -98,12 +102,14 @@ void loadConfig() {
       showWeather = f.readStringUntil('\n').toInt();
       showAnalogClock = f.readStringUntil('\n').toInt();
       showCombine = f.readStringUntil('\n').toInt();
+      showDrawing = f.readStringUntil('\n').toInt();
       String rotStr = f.readStringUntil('\n');
       rotStr.trim();
-      if (rotStr.length() > 0) {
-        rotationSpeed = rotStr.toInt();
-      } else {
-        rotationSpeed = 20; // Default if not found or empty
+      if (rotStr.length() > 0) rotationSpeed = rotStr.toInt();
+      
+      for (int i = 0; i < 84; i++) {
+        if (f.available()) drawBoard[i] = f.readStringUntil('\n').toInt();
+        else drawBoard[i] = 0;
       }
       if (rotationSpeed < 2) rotationSpeed = 2;
       
@@ -151,7 +157,7 @@ void drawAnalogClock(int h, int m, int cx = 42, int cy = 8) {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT V2.8 ===\n");
+  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT ===\n");
   
   Serial2.begin(19200, SERIAL_8E1, 19, 18);
   Pixel.begin();
@@ -201,58 +207,159 @@ void setup() {
     }
     playlistJson += "]";
 
+    String boardData = "[";
+    for(int i=0; i<84; i++) boardData += String(drawBoard[i]) + (i==83?"":",");
+    boardData += "]";
+
     String html = "<!DOCTYPE html><html lang='pl'><head>"
                   "<meta charset='UTF-8'>"
-                  "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+                  "<meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0'>"
                   "<title>Flipdot Dashboard</title>"
                   "<style>"
-                  "body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;text-align:center;padding:15px;line-height:1.5;}"
-                  "h1{color:#58a6ff;margin-bottom:5px;font-weight:600;font-size:1.8em;letter-spacing:-0.5px;}"
-                  ".subtitle{color:#8b949e;font-size:0.9em;margin-bottom:20px;}"
-                  ".card{background:#161b22;padding:24px;border-radius:16px;margin:10px auto;max-width:450px;text-align:left;border:1px solid #30363d;box-shadow:0 8px 24px rgba(0,0,0,0.3);}"
-                  ".section-title{font-size:0.9em;color:#8b949e;text-transform:uppercase;margin:20px 0 10px;font-weight:bold;letter-spacing:1px;}"
-                  ".row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #30363d;}"
-                  ".switch{position:relative;display:inline-block;width:48px;height:24px;}"
-                  ".switch input{opacity:0;width:0;height:0;}"
-                  ".slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#30363d;transition:.3s;border-radius:24px;}"
-                  ".slider:before{position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.3s;border-radius:50%;}"
-                  "input:checked + .slider{background-color:#238636;}"
-                  "input:checked + .slider:before{transform:translateX(24px);}"
-                  ".list-item{display:flex;justify-content:space-between;align-items:center;background:#0d1117;margin:8px 0;padding:12px;border-radius:8px;border:1px solid #30363d;transition:0.2s;}"
-                  ".list-item:hover{border-color:#58a6ff;}"
-                  ".del-btn{background:transparent;color:#f85149;border:1px solid #30363d;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:bold;transition:0.2s;}"
-                  ".del-btn:hover{background:#da3633;color:white;border-color:#da3633;}"
-                  ".add-row{display:flex;flex-direction:column;margin-top:20px;gap:12px;}"
-                  "input[type=text], input[type=number]{background:#0d1117;border:1px solid #30363d;color:white;padding:12px;border-radius:8px;outline:none;font-size:1em;transition:0.2s;width:100%;box-sizing:border-box;}"
-                  "input[type=text]:focus{border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,0.1);}"
-                  ".add-btn{background:#1f6feb;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:bold;font-size:1em;width:100%;transition:0.2s;}"
-                  ".add-btn:hover{background:#388bfd;}"
-                  ".save-btn{background:#238636;color:white;border:none;padding:16px;width:100%;border-radius:10px;font-size:1.1em;cursor:pointer;margin-top:24px;font-weight:bold;box-shadow:0 4px 12px rgba(35,134,54,0.2);transition:0.2s;}"
-                  ".save-btn:hover{background:#2ea043;transform:translateY(-1px);}"
-                  ".info-footer{margin-top:20px;font-size:0.8em;color:#8b949e;}"
-                  "a{color:#58a6ff;text-decoration:none;}a:hover{text-decoration:underline;}"
+                  ":root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--sub:#8b949e;--blue:#58a6ff;--green:#238636;--red:#f85149;}"
+                  "body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;margin:0;padding:20px;display:flex;flex-direction:column;align-items:center;}"
+                  "h1{color:var(--blue);margin:0 0 5px;font-size:1.8em;text-align:center;width:100%;}"
+                  ".subtitle{color:var(--sub);font-size:0.9em;margin-bottom:30px;text-align:center;width:100%;}"
+                  ".subtitle a{color:var(--sub);text-decoration:underline;}"
+                  ".container{width:100%;max-width:1000px;}"
+                  ".section-title{font-size:0.8em;color:var(--sub);text-transform:uppercase;margin:40px 0 15px;font-weight:bold;letter-spacing:1.5px;text-align:left;width:100%;}"
+                  
+                  ".tile-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:12px;width:100%;}"
+                  ".tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 10px;cursor:pointer;text-align:center;transition:0.2s cubic-bezier(0.4,0,0.2,1);position:relative;display:flex;flex-direction:column;gap:10px;user-select:none;}"
+                  ".tile:hover{border-color:var(--sub);background:#1c2128;}"
+                  ".tile.active{background:rgba(35, 134, 54, 0.15);border-color:#2ea043;box-shadow:0 0 15px rgba(35,134,54,0.1);}"
+                  ".tile.active .icon svg{stroke:#3fb950;}"
+                  ".tile.active .label{color:#fff;}"
+                  ".tile .icon svg{width:28px;height:28px;stroke:var(--sub);transition:0.2s;}"
+                  ".tile .label{font-size:0.85em;font-weight:600;color:var(--sub);}"
+                  ".tile input{display:none;}"
+                  
+                  ".board-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;box-sizing:border-box;margin-bottom:20px;}"
+                  ".canvas-wrapper{width:100%;overflow-x:auto;background:#000;border-radius:8px;border:2px solid var(--border);margin-bottom:15px;touch-action:none;}"
+                  "canvas{display:block;width:100%;height:auto;image-rendering:pixelated;cursor:crosshair;}"
+                  
+                  ".msg-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;box-sizing:border-box;}"
+                  ".list-item{display:flex;justify-content:space-between;align-items:center;background:var(--bg);margin:8px 0;padding:12px 16px;border-radius:10px;border:1px solid var(--border);}"
+                  ".del-btn{background:transparent;color:var(--red);border:1px solid #444;border-radius:6px;padding:6px 12px;cursor:pointer;}"
+                  "input[type=text], input[type=number]{background:var(--bg);border:1px solid var(--border);color:white;padding:14px;border-radius:10px;font-size:1em;width:100%;box-sizing:border-box;margin-bottom:10px;}"
+                  ".btn{border:none;padding:14px;border-radius:10px;font-size:1em;cursor:pointer;font-weight:bold;transition:0.2s;}"
+                  ".btn-blue{background:#1f6feb;color:white;width:100%;}"
+                  ".btn-green{background:var(--green);color:white;width:100%;margin-top:20px;font-size:1.1em;box-shadow:0 4px 15px rgba(35,134,54,0.3);}"
+                  ".btn-red{background:rgba(248,81,73,0.1);color:var(--red);border:1px solid var(--red);}"
+                  ".btn-gray{background:#30363d;color:#fff;border:1px solid var(--border);}"
+                  ".btn:hover{filter:brightness(1.2);}"
+                  
+                  ".speed-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;width:100%;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;margin-top:20px;}"
+                  ".footer{margin-top:50px;padding:20px;color:var(--sub);font-size:0.95em;border-top:1px solid var(--border);width:100%;max-width:1000px;text-align:center;}"
+                  ".footer a{color:#79c0ff;text-decoration:none;font-weight:600;}"
                   "</style></head><body>"
-                  "<h1>Smart Flipdot</h1>"
-                  "<div class='subtitle'>Pixel v3.8 | <a href='http://flipdot.local'>flipdot.local</a></div>"
-                  "<form id='configForm' action='/save' method='POST'>"
-                  "<div class='card'>"
-                  "<div class='section-title'>Control</div>"
-                  "<div class='row'><span>Digital Clock</span><label class='switch'><input type='checkbox' name='c1' " + String(showClock?"checked":"") + "><span class='slider'></span></label></div>"
-                  "<div class='row'><span>Analog Clock</span><label class='switch'><input type='checkbox' name='c5' " + String(showAnalogClock?"checked":"") + "><span class='slider'></span></label></div>"
-                  "<div class='row'><span>Analog + Digital Clock</span><label class='switch'><input type='checkbox' name='c6' " + String(showCombine?"checked":"") + "><span class='slider'></span></label></div>"
-                  "<div class='row'><span>Date</span><label class='switch'><input type='checkbox' name='c2' " + String(showDate?"checked":"") + "><span class='slider'></span></label></div>"
-                  "<div class='row'><span>Weather</span><label class='switch'><input type='checkbox' name='c4' " + String(showWeather?"checked":"") + "><span class='slider'></span></label></div>"
-                  "<div class='row'><span>Custom messages</span><label class='switch'><input type='checkbox' name='c3' " + String(showCustom?"checked":"") + "><span class='slider'></span></label></div>"
-                  "<div class='row'><span>Rotation (sec)</span><input type='number' name='speed' value='" + String(rotationSpeed) + "' style='width:80px;'></div>"
-                  "<div class='section-title'>Messages</div>"
-                  "<div id='msgList'></div>"
-                  "<div class='add-row'><input type='text' id='newMsg' placeholder='Write...'><button type='button' class='add-btn' onclick='addMsg()'>ADD TO LIST</button></div>"
-                  "<input type='hidden' name='msgs' id='msgsInput'>"
-                  "<button type='submit' class='save-btn'>SAVE & UPDATE DISPLAY</button>"
+                  " <div class='container'>"
+                  
+                  " <h1>Smart Flipdot</h1>"
+                  " <div class='subtitle'>Pixel v4.7 | <a href='http://flipdot.local'>flipdot.local</a></div>"
+                  " <form action='/save' method='POST' id='mainForm'>"
+                  " <div class='section-title'>Control Panel</div>"
+                  " <div class='tile-grid'>"
+                  "  <div class='tile " + String(showClock?"active":"") + "' onclick='toggleTile(this)'>"
+                  "    <div class='icon'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg></div><span class='label'>Digital</span><input type='checkbox' name='c1' " + String(showClock?"checked":"") + "></div>"
+                  "  <div class='tile " + String(showAnalogClock?"active":"") + "' onclick='toggleTile(this)'>"
+                  "    <div class='icon'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 6v6l4 2'/><path d='M16.2 7.8l-1.3 1.3'/><path d='M7.8 7.8l1.3 1.3'/></svg></div><span class='label'>Analog</span><input type='checkbox' name='c5' " + String(showAnalogClock?"checked":"") + "></div>"
+                  "  <div class='tile " + String(showCombine?"active":"") + "' onclick='toggleTile(this)'>"
+                  "    <div class='icon'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2v20'/><path d='M2 12h20'/><circle cx='12' cy='12' r='10'/></svg></div><span class='label'>Combine</span><input type='checkbox' name='c6' " + String(showCombine?"checked":"") + "></div>"
+                  "  <div class='tile " + String(showDrawing?"active":"") + "' onclick='toggleTile(this)'>"
+                  "    <div class='icon'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 19l7-7 3 3-7 7-3-3z'/><path d='M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z'/><path d='M2 2l5 5'/><circle cx='12' cy='12' r='1'/></svg></div><span class='label'>Drawing</span><input type='checkbox' name='c7' " + String(showDrawing?"checked":"") + "></div>"
+                  "  <div class='tile " + String(showDate?"active":"") + "' onclick='toggleTile(this)'>"
+                  "    <div class='icon'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/></svg></div><span class='label'>Date</span><input type='checkbox' name='c2' " + String(showDate?"checked":"") + "></div>"
+                  "  <div class='tile " + String(showWeather?"active":"") + "' onclick='toggleTile(this)'>"
+                  "    <div class='icon'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='5'/><path d='M12 1v2'/><path d='M12 21v2'/><path d='M4.22 4.22l1.42 1.42'/><path d='M18.36 18.36l1.42 1.42'/><path d='M1 12h2'/><path d='M21 12h2'/><path d='M4.22 19.78l1.42-1.42'/><path d='M18.36 5.64l1.42-1.42'/></svg></div><span class='label'>Weather</span><input type='checkbox' name='c4' " + String(showWeather?"checked":"") + "></div>"
+                  "  <div class='tile " + String(showCustom?"active":"") + "' onclick='toggleTile(this)'>"
+                  "    <div class='icon'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg></div><span class='label'>Messages</span><input type='checkbox' name='c3' " + String(showCustom?"checked":"") + "></div>"
+                  " </div>"
+
+                  " <div class='section-title'>Drawing Board</div>"
+                  " <div class='board-card'>"
+                  "  <div class='canvas-wrapper'><canvas id='paintCanvas' width='840' height='160'></canvas></div>"
+                  "  <div style='display:grid; grid-template-columns:1fr 70px; gap:12px;'>"
+                  "    <div style='display:flex; flex-direction:column; gap:12px;'>"
+                  "      <button type='button' class='btn btn-gray' style='height:50px; display:flex; align-items:center; justify-content:center;' onclick='clearCanvas()'>CLEAR BOARD</button>"
+                  "      <button type='button' class='btn btn-blue' style='height:50px; display:flex; align-items:center; justify-content:center;' onclick='saveCanvas()'>SAVE AS PERMANENT</button>"
+                  "    </div>"
+                  "    <div style='display:flex; flex-direction:column; gap:12px;'>"
+                  "      <button type='button' id='pencilBtn' class='btn btn-blue' style='height:50px; display:flex; justify-content:center; align-items:center;' onclick='setTool(1)'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:24px;height:24px;'><path d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'/><path d='m15 5 4 4'/></svg></button>"
+                  "      <button type='button' id='eraserBtn' class='btn btn-blue' style='height:50px; opacity:0.5; display:flex; justify-content:center; align-items:center;' onclick='setTool(0)'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:24px;height:24px;'><path d='m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.9-9.9c1-1 2.5-1 3.4 0l4.4 4.4c1 1 1 2.5 0 3.4l-8.4 8.4c-1 1-2.5 1-3.4 0Z'/><path d='m22 21-2.1-2.1'/><path d='m11 5 9 9'/></svg></button>"
+                  "    </div>"
+                  "  </div>"
+                  " </div>"
+
+                  " <div class='section-title'>Message Editor</div>"
+                  " <div class='msg-card'>"
+                  "  <div id='msgList'></div>"
+                  "  <div style='margin-top:20px; display:flex; gap:10px;'>"
+                  "    <input type='text' id='newMsg' placeholder='Write something...' style='margin:0'>"
+                  "    <button type='button' class='btn btn-blue' onclick='addMsg()' style='width:120px'>ADD</button>"
+                  "  </div>"
+                  " </div>"
+
+                  " <div class='section-title'>General Settings</div>"
+                  " <div class='speed-card'>"
+                  "  <span style='font-weight:600'>Rotation speed (seconds):</span>"
+                  "  <input type='number' name='speed' value='" + String(rotationSpeed) + "' style='width:100px;margin:0;text-align:center;'>"
+                  " </div>"
+
+                  " <input type='hidden' name='msgs' id='msgsInput'>"
+                  " <button type='submit' class='btn btn-green'>APPLY</button>"
+                  " </form>"
+                  
+                  " <div class='footer'>"
+                  " Made with ❤️ by <a href='https://kinter.one' target='_blank'>Kinter</a> © 2026"
+                  " </div>"
                   "</div>"
-                  "<div class='info-footer'>Connected to IP: " + WiFi.localIP().toString() + "</div>"
-                  "</form>"
+
                   "<script>"
+                  "function toggleTile(el) { el.classList.toggle('active'); const cb = el.querySelector('input'); cb.checked = !cb.checked; document.getElementById('mainForm').submit(); }"
+                  "const canvas = document.getElementById('paintCanvas');"
+                  "const ctx = canvas.getContext('2d');"
+                  "const W = 84, H = 16, SCALE = 10;"
+                  "let drawing = false; let lastX = -1, lastY = -1; let tool = 1;"
+                  "let boardRaw = " + boardData + ";"
+                  "let board = Array(W).fill(0).map((_, x) => Array(H).fill(0).map((_, y) => (boardRaw[x] & (1 << y)) ? 1 : 0));"
+                  
+                  "function initBoard() {"
+                  "  ctx.fillStyle = '#000'; ctx.fillRect(0,0,840,160);"
+                  "  ctx.strokeStyle = '#111'; ctx.lineWidth=0.5;"
+                  "  for(let i=0; i<=W; i++) { ctx.beginPath(); ctx.moveTo(i*SCALE,0); ctx.lineTo(i*SCALE,160); ctx.stroke(); }"
+                  "  for(let i=0; i<=H; i++) { ctx.beginPath(); ctx.moveTo(0,i*SCALE); ctx.lineTo(840,i*SCALE); ctx.stroke(); }"
+                  "  for(let x=0; x<W; x++) for(let y=0; y<H; y++) if(board[x][y]) { ctx.fillStyle='#ffdd00'; ctx.fillRect(x*SCALE+1, y*SCALE+1, SCALE-2, SCALE-2); }"
+                  "}"
+                  
+                  "function setPixel(x, y, on) {"
+                  "  if (x < 0 || x >= W || y < 0 || y >= H) return;"
+                  "  if (board[x][y] === on) return;"
+                  "  board[x][y] = on; ctx.fillStyle = on ? '#ffdd00' : '#000';"
+                  "  ctx.fillRect(x*SCALE+1, y*SCALE+1, SCALE-2, SCALE-2);"
+                  "  fetch(`/api/draw?x=${x}&y=${y}&on=${on}`);"
+                  "}"
+
+                  "function setTool(t){tool=t;document.getElementById('pencilBtn').style.opacity=t===1?'1':'0.5';document.getElementById('eraserBtn').style.opacity=t===0?'1':'0.5';}"
+                  "function handleMove(e) {"
+                  "  if (!drawing) return;"
+                  "  const rect = canvas.getBoundingClientRect();"
+                  "  const ev = (e.touches && e.touches[0]) || e;"
+                  "  const x = Math.floor((ev.clientX - rect.left) / (rect.width / W));"
+                  "  const y = Math.floor((ev.clientY - rect.top) / (rect.height / H));"
+                  "  if (x !== lastX || y !== lastY) { setPixel(x, y, tool); lastX = x; lastY = y; }"
+                  "}"
+
+                  "canvas.onmousedown = (e) => { drawing = true; handleMove(e); };"
+                  "window.onmouseup = () => { drawing = false; lastX = -1; lastY = -1; };"
+                  "canvas.onmousemove = handleMove;"
+                  "canvas.addEventListener('touchstart', (e) => { drawing = true; handleMove(e); e.preventDefault(); }, {passive:false});"
+                  "canvas.addEventListener('touchmove', (e) => { handleMove(e); e.preventDefault(); }, {passive:false});"
+                  "canvas.addEventListener('touchend', () => { drawing = false; });"
+
+                  "function clearCanvas() { fetch('/api/draw?clear=1').then(() => { board.forEach(c => c.fill(0)); initBoard(); }); }"
+                  "function saveCanvas() { fetch('/api/draw?save=1').then(() => alert('Successfully saved to Flash! 🏮')); }"
+
                   "let playlist = " + playlistJson + ";"
                   "function render() {"
                   "  const list = document.getElementById('msgList'); list.innerHTML = '';"
@@ -266,7 +373,7 @@ void setup() {
                   "}"
                   "function delMsg(i) { playlist.splice(i, 1); render(); }"
                   "document.getElementById('newMsg').addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); addMsg(); } });"
-                  "render();"
+                  "initBoard(); render();"
                   "</script></body></html>";
     request->send(200, "text/html", html);
   });
@@ -278,6 +385,7 @@ void setup() {
     showWeather = request->hasParam("c4", true);
     showAnalogClock = request->hasParam("c5", true);
     showCombine = request->hasParam("c6", true);
+    showDrawing = request->hasParam("c7", true);
     if (request->hasParam("speed", true)) rotationSpeed = request->getParam("speed", true)->value().toInt();
     if (rotationSpeed < 2) rotationSpeed = 2;
 
@@ -297,6 +405,38 @@ void setup() {
     saveConfig();
     forceRefresh = true;
     request->redirect("/");
+  });
+
+  server.on("/api/draw", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("clear")) {
+        memset(drawBoard, 0, sizeof(drawBoard));
+        saveConfig();
+        forceRefresh = true;
+        request->send(200, "text/plain", "Cleared");
+        return;
+    }
+    if (request->hasParam("x") && request->hasParam("y") && request->hasParam("on")) {
+        int x = request->getParam("x")->value().toInt();
+        int y = request->getParam("y")->value().toInt();
+        int on = request->getParam("on")->value().toInt();
+        if (x >= 0 && x < 84 && y >= 0 && y < 16) {
+            if (on) drawBoard[x] |= (1 << y);
+            else drawBoard[x] &= ~(1 << y);
+            // Instant feedback: jump to drawing screen (masterIdx 5)
+            static uint32_t lastApiUpdate = 0;
+            if (millis() - lastApiUpdate > 500) { // Throttle re-renders and saves
+                lastApiUpdate = millis();
+                forceRefresh = true;
+                // We'll let loop() pick it up
+            }
+        }
+        request->send(200, "text/plain", "OK");
+    } else if (request->hasParam("save")) {
+        saveConfig();
+        request->send(200, "text/plain", "Saved");
+    } else {
+        request->send(400, "text/plain", "Bad Request");
+    }
   });
 
   server.begin();
@@ -329,7 +469,7 @@ void loop() {
     String toShow = "";
     int attempts = 0;
     while (attempts < 20) {
-        masterIdx = (masterIdx + 1) % (5 + playlist.size());
+        masterIdx = (masterIdx + 1) % (6 + playlist.size());
         
         if (masterIdx == 0 && showClock) { 
             u8g2_gfx.setFont(FONT_CLOCK);
@@ -351,8 +491,12 @@ void loop() {
             // Combine mode handled specially
             break;
         }
-        if (masterIdx >= 5 && showCustom) {
-            int pIdx = masterIdx - 5;
+        if (masterIdx == 5 && showDrawing) {
+            // Drawing screen
+            break;
+        }
+        if (masterIdx >= 6 && showCustom) {
+            int pIdx = masterIdx - 6;
             if (pIdx >= 0 && pIdx < (int)playlist.size()) { 
                 u8g2_gfx.setFont(FONT_TEXT);
                 toShow = playlist[pIdx]; break; 
@@ -415,6 +559,17 @@ void loop() {
         
         Pixel_GFX.commitBufferToPage(0);
         delay(200);
+    } else if (masterIdx == 5 && showDrawing) {
+        // Just draw the board
+        Pixel_GFX.selectBuffer(0);
+        Pixel_GFX.fillScreen(0);
+        for(int x=0; x<84; x++) {
+            for(int y=0; y<16; y++) {
+                if (drawBoard[x] & (1 << y)) Pixel_GFX.drawPixel(x, y, 1);
+            }
+        }
+        Pixel_GFX.commitBufferToPage(0);
+        delay(500); 
     } else if (toShow != "") {
       Serial.println("Updating display: " + toShow);
       Pixel_GFX.selectBuffer(0);
