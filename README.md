@@ -4,6 +4,8 @@ A high-fidelity weather and clock display system for ESP32-controlled flipdot bo
 
 ## Features
 
+- **Precision Clock**: Synchronized via NTP (Network Time Protocol) for reliable, to-the-second accuracy, supporting 24h format.
+- **Dynamic Calendar**: Automated date tracking.
 - **Real-time Weather**: Synchronized with Open-Meteo API for accurate local conditions.
 - **Professional Iconography**: Includes a custom library of 22 professional 16x16 weather icons.
 - **Optimized UI**: Pixel-perfect typography and layout designed specifically for flipdot resolution.
