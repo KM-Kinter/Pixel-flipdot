@@ -3,6 +3,7 @@
 #include <WiFiManager.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <ESPmDNS.h>
 #include <Pixel.hpp>
 #include <Adafruit_GFX_Pixel.hpp>
 #include <U8g2_for_Adafruit_GFX.h>
@@ -31,6 +32,36 @@ bool forceRefresh = false;
 #define FONT_TEXT u8g2_font_unifont_t_polish    // Supports Polish
 #define FONT_CLOCK u8g2_font_logisoso16_tn      // Large, 16px high numbers
 #define FONT_DATE u8g2_font_logisoso16_tf       // Large, 16px high proportional
+
+// Helper to decode basic HTML entities like &#347; (ś)
+String decodeEntities(String str) {
+  String out = "";
+  for (int i = 0; i < (int)str.length(); i++) {
+    if (str[i] == '&' && i + 1 < (int)str.length() && str[i + 1] == '#') {
+      int end = str.indexOf(';', i);
+      if (end != -1) {
+        int code = str.substring(i + 2, end).toInt();
+        if (code > 0) {
+          // UTF-8 encoding
+          if (code < 0x80) {
+            out += (char)code;
+          } else if (code < 0x800) {
+            out += (char)(0xC0 | (code >> 6));
+            out += (char)(0x80 | (code & 0x3F));
+          } else {
+            out += (char)(0xE0 | (code >> 12));
+            out += (char)(0x80 | ((code >> 6) & 0x3F));
+            out += (char)(0x80 | (code & 0x3F));
+          }
+          i = end;
+          continue;
+        }
+      }
+    }
+    out += str[i];
+  }
+  return out;
+}
 
 void saveConfig() {
   File f = LittleFS.open("/config.txt", "w");
@@ -82,7 +113,7 @@ void drawUTF8Centered(const String& text, int y = 14) {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT V2.7 ===\n");
+  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT V2.8 ===\n");
   
   Serial2.begin(19200, SERIAL_8E1, 19, 18);
   Pixel.begin();
@@ -114,6 +145,12 @@ void setup() {
   }
 
   Serial.println("WiFi Connected!");
+  
+  // Setup MDNS
+  if (MDNS.begin("flipdot")) {
+    Serial.println("MDNS responder started: flipdot.local");
+  }
+
   timeClient.begin();
   timeClient.forceUpdate();
 
@@ -129,9 +166,11 @@ void setup() {
     String html = "<!DOCTYPE html><html lang='pl'><head>"
                   "<meta charset='UTF-8'>"
                   "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+                  "<title>Flipdot Dashboard</title>"
                   "<style>"
                   "body{background:#0d1117;color:#c9d1d9;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;text-align:center;padding:15px;line-height:1.5;}"
-                  "h1{color:#58a6ff;margin-bottom:20px;font-weight:600;font-size:1.8em;letter-spacing:-0.5px;}"
+                  "h1{color:#58a6ff;margin-bottom:5px;font-weight:600;font-size:1.8em;letter-spacing:-0.5px;}"
+                  ".subtitle{color:#8b949e;font-size:0.9em;margin-bottom:20px;}"
                   ".card{background:#161b22;padding:24px;border-radius:16px;margin:10px auto;max-width:450px;text-align:left;border:1px solid #30363d;box-shadow:0 8px 24px rgba(0,0,0,0.3);}"
                   ".section-title{font-size:0.9em;color:#8b949e;text-transform:uppercase;margin:20px 0 10px;font-weight:bold;letter-spacing:1px;}"
                   ".row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #30363d;}"
@@ -152,8 +191,11 @@ void setup() {
                   ".add-btn:hover{background:#388bfd;}"
                   ".save-btn{background:#238636;color:white;border:none;padding:16px;width:100%;border-radius:10px;font-size:1.1em;cursor:pointer;margin-top:24px;font-weight:bold;box-shadow:0 4px 12px rgba(35,134,54,0.2);transition:0.2s;}"
                   ".save-btn:hover{background:#2ea043;transform:translateY(-1px);}"
+                  ".info-footer{margin-top:20px;font-size:0.8em;color:#8b949e;}"
+                  "a{color:#58a6ff;text-decoration:none;}a:hover{text-decoration:underline;}"
                   "</style></head><body>"
                   "<h1>Smart Flipdot</h1>"
+                  "<div class='subtitle'>Pixel v2.8 | <a href='http://flipdot.local'>flipdot.local</a></div>"
                   "<form id='configForm' action='/save' method='POST'>"
                   "<div class='card'>"
                   "<div class='section-title'>Control</div>"
@@ -166,7 +208,9 @@ void setup() {
                   "<div class='add-row'><input type='text' id='newMsg' placeholder='Write...'><button type='button' class='add-btn' onclick='addMsg()'>ADD TO LIST</button></div>"
                   "<input type='hidden' name='msgs' id='msgsInput'>"
                   "<button type='submit' class='save-btn'>SAVE & UPDATE DISPLAY</button>"
-                  "</div></form>"
+                  "</div>"
+                  "<div class='info-footer'>Connected to IP: " + WiFi.localIP().toString() + "</div>"
+                  "</form>"
                   "<script>"
                   "let playlist = " + playlistJson + ";"
                   "function render() {"
