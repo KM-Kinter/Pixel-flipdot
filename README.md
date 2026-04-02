@@ -31,7 +31,14 @@ The display is connected via two separate connectors:
    - **Black**: GND
    - *This connector is responsible for powering the internal backlight. (but not always, like in my case :))* 
 
-### RS485 Converter
+### Hardware Configuration (DIP Switches)
+> [!TIP]
+> **Note to self and others:** Inside the flipdot panel, there is an 8-position DIP switch block. **Switch #5** is responsible for for enabling/disabling the internal LED backlight hardware-side. If your backlight is permanently on or off regardless of software commands, check this switch!
+> 
+> *Pro-tip: Verify this physical bypass first to avoid spending several days attempting to troubleshoot the backlight state via software integration like I did :)*
+
+### RS485 Interface
+
 A TTL-to-RS485 converter module is required to interface the ESP32 (3.3V logic) with the display's RS485 bus.
 
 **Wiring (ESP32 to Converter):**
