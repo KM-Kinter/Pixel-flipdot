@@ -220,7 +220,7 @@ void loop() {
   struct tm * timeinfo = localtime(&now);
 
   char timeStr[6]; sprintf(timeStr, "%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min);
-  char dateStr[9]; sprintf(dateStr, "%02d.%02d.%02d", timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year % 100);
+  char dateStr[11]; sprintf(dateStr, "%02d.%02d.%02d", timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year % 100);
 
   static uint32_t lastToggle = 0;
   static int masterIdx = 0; 
@@ -256,8 +256,8 @@ void loop() {
       Serial.println("Updating display: " + toShow);
       Pixel_GFX.selectBuffer(0);
       Pixel_GFX.fillScreen(0);
-      // yPos: 15 for Clock/Date (max height), 13 for narrow text (baseline)
-      int yPos = (u8g2_gfx.getFontAscent() > 13 ? 15 : 13);
+      // yPos: 16 for large fonts (fills rows 0-15), 14 for narrow text (baseline)
+      int yPos = (u8g2_gfx.getFontAscent() > 13 ? 16 : 14);
       drawUTF8Centered(toShow, yPos);
       Pixel_GFX.commitBufferToPage(0);
       delay(200); 
