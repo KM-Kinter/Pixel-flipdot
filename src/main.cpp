@@ -5,7 +5,7 @@
 #include <WiFiUdp.h>
 #include <Pixel.hpp>
 #include <Adafruit_GFX_Pixel.hpp>
-#include <Fonts/FreeSerif9pt7b.h>
+#include <U8g2_for_Adafruit_GFX.h>
 
 #include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
@@ -13,6 +13,7 @@
 
 PixelClass Pixel(Serial2, 22, 22);
 Adafruit_Pixel Pixel_GFX(Pixel, 84, 1); // Address 1
+U8G2_FOR_ADAFRUIT_GFX u8g2_gfx;
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "ntp.nask.pl", 7200); // GMT+2
@@ -23,8 +24,13 @@ std::vector<String> playlist = {"Hello"};
 bool showClock = true;
 bool showDate = true;
 bool showCustom = true;
-int rotationSpeed = 20; // Default 20 seconds
+int rotationSpeed = 10; 
 bool forceRefresh = false;
+
+// Fonts - Proportional fonts look much better and symbols are balanced
+#define FONT_TEXT u8g2_font_helvB10_tf        // Proportional, 10px high (fits Polish)
+#define FONT_CLOCK u8g2_font_logisoso16_tn   // Numeric only, 16px high
+#define FONT_DATE u8g2_font_helvB12_tf        // Proportional, 12px high
 
 void saveConfig() {
   File f = LittleFS.open("/config.txt", "w");
@@ -50,7 +56,7 @@ void loadConfig() {
       showCustom = f.readStringUntil('\n').toInt();
       String rotStr = f.readStringUntil('\n');
       if (rotStr.length() > 0) rotationSpeed = rotStr.toInt();
-      if (rotationSpeed < 2) rotationSpeed = 2; // Min 2s
+      if (rotationSpeed < 2) rotationSpeed = 2;
       
       playlist.clear();
       while (f.available()) {
@@ -65,20 +71,18 @@ void loadConfig() {
   }
 }
 
-void printCentered(const String& text, int y = 14) {
-  int16_t x1, y1;
-  uint16_t w, h;
-  Pixel_GFX.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+void drawUTF8Centered(const String& text, int y = 14) {
+  int w = u8g2_gfx.getUTF8Width(text.c_str());
   int x = (84 - w) / 2;
   if (x < 0) x = 0;
-  Pixel_GFX.setCursor(x, y);
-  Pixel_GFX.print(text);
+  u8g2_gfx.setCursor(x, y);
+  u8g2_gfx.print(text);
 }
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT V2.5 ===\n");
+  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT V2.7 ===\n");
   
   Serial2.begin(19200, SERIAL_8E1, 19, 18);
   Pixel.begin();
@@ -91,10 +95,15 @@ void setup() {
   }
 
   Pixel_GFX.init();
+  u8g2_gfx.begin(Pixel_GFX);
+  u8g2_gfx.setFontMode(1); 
+  u8g2_gfx.setFontDirection(0);
+  u8g2_gfx.setForegroundColor(1); 
+
   Pixel_GFX.selectBuffer(0);
   Pixel_GFX.fillScreen(0);
-  Pixel_GFX.setFont(&FreeSerif9pt7b);
-  printCentered("WiFi...");
+  u8g2_gfx.setFont(FONT_TEXT);
+  drawUTF8Centered("WiFi...");
   Pixel_GFX.commitBufferToPage(0);
 
   WiFiManager wm;
@@ -164,7 +173,7 @@ void setup() {
                   "  document.getElementById('msgsInput').value = playlist.join('|');"
                   "}"
                   "function addMsg() {"
-                  "  const input = document.getElementById('newMsg'); if(input.value) { playlist.push(input.value.toUpperCase()); input.value = ''; render(); }"
+                  "  const input = document.getElementById('newMsg'); if(input.value) { playlist.push(input.value); input.value = ''; render(); }"
                   "}"
                   "function delMsg(i) { playlist.splice(i, 1); render(); }"
                   "document.getElementById('newMsg').addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); addMsg(); } });"
@@ -211,7 +220,7 @@ void loop() {
   struct tm * timeinfo = localtime(&now);
 
   char timeStr[6]; sprintf(timeStr, "%02d:%02d", timeinfo->tm_hour, timeinfo->tm_min);
-  char dateStr[10]; sprintf(dateStr, "%02d.%02d.%02d", timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year % 100);
+  char dateStr[9]; sprintf(dateStr, "%02d.%02d.%02d", timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year % 100);
 
   static uint32_t lastToggle = 0;
   static int masterIdx = 0; 
@@ -225,11 +234,20 @@ void loop() {
     while (attempts < 20) {
         masterIdx = (masterIdx + 1) % (2 + (playlist.size() > 0 ? playlist.size() : 1));
         
-        if (masterIdx == 0 && showClock) { toShow = timeStr; break; }
-        if (masterIdx == 1 && showDate) { toShow = dateStr; break; }
+        if (masterIdx == 0 && showClock) { 
+            u8g2_gfx.setFont(FONT_CLOCK);
+            toShow = timeStr; break; 
+        }
+        if (masterIdx == 1 && showDate) { 
+            u8g2_gfx.setFont(FONT_DATE);
+            toShow = dateStr; break; 
+        }
         if (masterIdx >= 2 && showCustom) {
             int pIdx = masterIdx - 2;
-            if (pIdx >= 0 && pIdx < playlist.size()) { toShow = playlist[pIdx]; break; }
+            if (pIdx >= 0 && pIdx < playlist.size()) { 
+                u8g2_gfx.setFont(FONT_TEXT);
+                toShow = playlist[pIdx]; break; 
+            }
         }
         attempts++;
     }
@@ -238,10 +256,11 @@ void loop() {
       Serial.println("Updating display: " + toShow);
       Pixel_GFX.selectBuffer(0);
       Pixel_GFX.fillScreen(0);
-      Pixel_GFX.setFont(&FreeSerif9pt7b);
-      printCentered(toShow);
+      // Dynamic baseline: Helvetica high fonts need 15, text needs 13
+      int yPos = (u8g2_gfx.getFontAscent() > 14 ? 15 : 13);
+      drawUTF8Centered(toShow, yPos);
       Pixel_GFX.commitBufferToPage(0);
-      delay(200); // Give hardware time to start flipping
+      delay(200); 
     }
   }
 }
