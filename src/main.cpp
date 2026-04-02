@@ -157,7 +157,7 @@ void drawAnalogClock(int h, int m, int cx = 42, int cy = 8) {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT V2.8 ===\n");
+  Serial.println("\n\n=== BOOTING PIXEL FLIPDOT ===\n");
   
   Serial2.begin(19200, SERIAL_8E1, 19, 18);
   Pixel.begin();
@@ -256,7 +256,7 @@ void setup() {
                   " <div class='container'>"
                   
                   " <h1>Smart Flipdot</h1>"
-                  " <div class='subtitle'>Pixel v4.0 | <a href='http://flipdot.local'>flipdot.local</a></div>"
+                  " <div class='subtitle'>Pixel v4.7 | <a href='http://flipdot.local'>flipdot.local</a></div>"
                   " <form action='/save' method='POST' id='mainForm'>"
                   " <div class='section-title'>Control Panel</div>"
                   " <div class='tile-grid'>"
@@ -307,7 +307,7 @@ void setup() {
                   " </div>"
 
                   " <input type='hidden' name='msgs' id='msgsInput'>"
-                  " <button type='submit' class='btn btn-green'>APPLY ALL CHANGES</button>"
+                  " <button type='submit' class='btn btn-green'>APPLY</button>"
                   " </form>"
                   
                   " <div class='footer'>"
