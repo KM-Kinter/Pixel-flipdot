@@ -279,18 +279,20 @@ void setup() {
                   " <div class='section-title'>Drawing Board</div>"
                   " <div class='board-card'>"
                   "  <div class='canvas-wrapper'><canvas id='paintCanvas' width='840' height='160'></canvas></div>"
-                  "  <div style='display:grid; grid-template-columns:1fr 70px; gap:12px;'>"
-                  "    <div style='display:flex; flex-direction:column; gap:12px;'>"
-                  "      <button type='button' class='btn btn-gray' style='height:50px; display:flex; align-items:center; justify-content:center;' onclick='clearCanvas()'>CLEAR BOARD</button>"
-                  "      <button type='button' class='btn btn-blue' style='height:50px; display:flex; align-items:center; justify-content:center;' onclick='saveCanvas()'>SAVE AS PERMANENT</button>"
+                  "  <div style='display:grid; grid-template-columns:1fr 70px 70px; gap:12px; height:50px;'>"
+                  "    <button type='button' class='btn btn-gray' style='height:100%; display:flex; align-items:center; justify-content:center;' onclick='clearCanvas()'>CLEAR BOARD</button>"
+                  "    <button type='button' id='pencilBtn' class='btn btn-blue' style='height:100%; display:flex; justify-content:center; align-items:center;' onclick='setTool(1)'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:24px;height:24px;'><path d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'/><path d='m15 5 4 4'/></svg></button>"
+                  "    <button type='button' id='eraserBtn' class='btn btn-blue' style='height:100%; opacity:0.5; display:flex; justify-content:center; align-items:center;' onclick='setTool(0)'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:24px;height:24px;'><path d='m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.9-9.9c1-1 2.5-1 3.4 0l4.4 4.4c1 1 1 2.5 0 3.4l-8.4 8.4c-1 1-2.5 1-3.4 0Z'/><path d='m22 21-2.1-2.1'/><path d='m11 5 9 9'/></svg></button>"
+                  "  </div>"
+                  "  <div style='margin-top:12px; text-align:center;'> "
+                  "    <div style='display:flex; gap:10px;'>"
+                  "      <input type='text' id='boardName' placeholder='Name your board...' style='margin:0; flex:1'>"
+                  "      <button type='button' class='btn btn-blue' style='width:120px; height:50px; display:flex; align-items:center; justify-content:center;' onclick='saveAsNew()'>SAVE NEW</button>"
                   "    </div>"
-                  "    <div style='display:flex; flex-direction:column; gap:12px;'>"
-                  "      <button type='button' id='pencilBtn' class='btn btn-blue' style='height:50px; display:flex; justify-content:center; align-items:center;' onclick='setTool(1)'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:24px;height:24px;'><path d='M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z'/><path d='m15 5 4 4'/></svg></button>"
-                  "      <button type='button' id='eraserBtn' class='btn btn-blue' style='height:50px; opacity:0.5; display:flex; justify-content:center; align-items:center;' onclick='setTool(0)'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:24px;height:24px;'><path d='m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.9-9.9c1-1 2.5-1 3.4 0l4.4 4.4c1 1 1 2.5 0 3.4l-8.4 8.4c-1 1-2.5 1-3.4 0Z'/><path d='m22 21-2.1-2.1'/><path d='m11 5 9 9'/></svg></button>"
-                  "    </div>"
+                  "    <div id='gallery' style='display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:10px; margin-top:15px;'></div>"
                   "  </div>"
                   " </div>"
-
+                  
                   " <div class='section-title'>Message Editor</div>"
                   " <div class='msg-card'>"
                   "  <div id='msgList'></div>"
@@ -325,55 +327,53 @@ void setup() {
                   "let board = Array(W).fill(0).map((_, x) => Array(H).fill(0).map((_, y) => (boardRaw[x] & (1 << y)) ? 1 : 0));"
                   
                   "function initBoard() {"
-                  "  ctx.fillStyle = '#000'; ctx.fillRect(0,0,840,160);"
-                  "  ctx.strokeStyle = '#111'; ctx.lineWidth=0.5;"
-                  "  for(let i=0; i<=W; i++) { ctx.beginPath(); ctx.moveTo(i*SCALE,0); ctx.lineTo(i*SCALE,160); ctx.stroke(); }"
-                  "  for(let i=0; i<=H; i++) { ctx.beginPath(); ctx.moveTo(0,i*SCALE); ctx.lineTo(840,i*SCALE); ctx.stroke(); }"
-                  "  for(let x=0; x<W; x++) for(let y=0; y<H; y++) if(board[x][y]) { ctx.fillStyle='#ffdd00'; ctx.fillRect(x*SCALE+1, y*SCALE+1, SCALE-2, SCALE-2); }"
+                  "  ctx.fillStyle = '#000'; ctx.fillRect(0,0,840,160); ctx.strokeStyle = '#111'; ctx.lineWidth=0.5;"
+                  "  for(let i=0; i<=W; i++){ctx.beginPath();ctx.moveTo(i*SCALE,0);ctx.lineTo(i*SCALE,160);ctx.stroke();}"
+                  "  for(let i=0; i<=H; i++){ctx.beginPath();ctx.moveTo(0,i*SCALE);ctx.lineTo(840,i*SCALE);ctx.stroke();}"
+                  "  for(let x=0; x<W; x++)for(let y=0; y<H; y++)if(board[x][y]){ctx.fillStyle='#ffdd00';ctx.fillRect(x*SCALE+1,y*SCALE+1,SCALE-2,SCALE-2);}"
                   "}"
                   
                   "function setPixel(x, y, on) {"
-                  "  if (x < 0 || x >= W || y < 0 || y >= H) return;"
-                  "  if (board[x][y] === on) return;"
-                  "  board[x][y] = on; ctx.fillStyle = on ? '#ffdd00' : '#000';"
-                  "  ctx.fillRect(x*SCALE+1, y*SCALE+1, SCALE-2, SCALE-2);"
+                  "  if (x<0||x>=W||y<0||y>=H||board[x][y]===on) return;"
+                  "  board[x][y]=on; ctx.fillStyle=on?'#ffdd00':'#000'; ctx.fillRect(x*SCALE+1,y*SCALE+1,SCALE-2,SCALE-2);"
                   "  fetch(`/api/draw?x=${x}&y=${y}&on=${on}`);"
                   "}"
 
-                  "function setTool(t){tool=t;document.getElementById('pencilBtn').style.opacity=t===1?'1':'0.5';document.getElementById('eraserBtn').style.opacity=t===0?'1':'0.5';}"
                   "function handleMove(e) {"
                   "  if (!drawing) return;"
-                  "  const rect = canvas.getBoundingClientRect();"
-                  "  const ev = (e.touches && e.touches[0]) || e;"
-                  "  const x = Math.floor((ev.clientX - rect.left) / (rect.width / W));"
-                  "  const y = Math.floor((ev.clientY - rect.top) / (rect.height / H));"
-                  "  if (x !== lastX || y !== lastY) { setPixel(x, y, tool); lastX = x; lastY = y; }"
+                  "  const rect = canvas.getBoundingClientRect(); const ev = (e.touches && e.touches[0]) || e;"
+                  "  const x = Math.floor((ev.clientX-rect.left)/(rect.width/W));"
+                  "  const y = Math.floor((ev.clientY-rect.top)/(rect.height/H));"
+                  "  if (x!==lastX||y!==lastY){setPixel(x,y,tool);lastX=x;lastY=y;}"
                   "}"
 
-                  "canvas.onmousedown = (e) => { drawing = true; handleMove(e); };"
-                  "window.onmouseup = () => { drawing = false; lastX = -1; lastY = -1; };"
-                  "canvas.onmousemove = handleMove;"
-                  "canvas.addEventListener('touchstart', (e) => { drawing = true; handleMove(e); e.preventDefault(); }, {passive:false});"
-                  "canvas.addEventListener('touchmove', (e) => { handleMove(e); e.preventDefault(); }, {passive:false});"
-                  "canvas.addEventListener('touchend', () => { drawing = false; });"
-
-                  "function clearCanvas() { fetch('/api/draw?clear=1').then(() => { board.forEach(c => c.fill(0)); initBoard(); }); }"
-                  "function saveCanvas() { fetch('/api/draw?save=1').then(() => alert('Successfully saved to Flash! 🏮')); }"
-
+                  "function setTool(t){tool=t;document.getElementById('pencilBtn').style.opacity=t===1?'1':'0.5';document.getElementById('eraserBtn').style.opacity=t===0?'1':'0.5';}"
+                  "function saveAsNew(){const n=document.getElementById('boardName').value; if(!n)alert('Name req'); else fetch('/api/boards/save?name='+encodeURIComponent(n)).then(()=>loadGallery());}"
+                  "function loadGallery(){fetch('/api/boards/list').then(r=>r.json()).then(data=>{const g=document.getElementById('gallery');g.innerHTML='';data.forEach(n=>{"
+                  "  const d=document.createElement('div');d.className='list-item';d.style.padding='8px 12px';d.style.margin='0';"
+                  "  d.innerHTML='<span style=\"font-size:0.9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px\">'+n+'</span>'+"
+                  "    '<div style=\"display:flex;gap:5px\"><button type=\"button\" onclick=\"loadBoard(\\''+n+'\\')\" style=\"background:var(--blue);border:none;border-radius:4px;padding:4px;cursor:pointer;display:flex\"><svg style=\"width:14px;height:14px;stroke:#fff\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"7 10 12 15 17 10\"/><line x1=\"12\" y1=\"15\" x2=\"12\" y2=\"3\"/></svg></button>'+"
+                  "    '<button type=\"button\" onclick=\"deleteBoard(\\''+n+'\\')\" style=\"background:rgba(248,81,73,0.1);border:1px solid var(--red);border-radius:4px;padding:4px;cursor:pointer;display:flex\"><svg style=\"width:14px;height:14px;stroke:var(--red)\" viewBox=\"0 0 24 24\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h18\"/><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\"/><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\"/></svg></button></div>';"
+                  "  g.appendChild(d);});});}"
+                  "function loadBoard(n){fetch('/api/boards/load?name='+encodeURIComponent(n)).then(()=>location.reload());}"
+                  "function deleteBoard(n){if(confirm('Delete '+n+'?'))fetch('/api/boards/delete?name='+encodeURIComponent(n)).then(()=>loadGallery());}"
+                  "canvas.onmousedown=(e)=>{drawing=true;handleMove(e);}; window.onmouseup=()=>{drawing=false;lastX=-1;lastY=-1;}; canvas.onmousemove=handleMove;"
+                  "canvas.addEventListener('touchstart',(e)=>{drawing=true;handleMove(e);e.preventDefault();},{passive:false});"
+                  "canvas.addEventListener('touchmove',(e)=>{handleMove(e);e.preventDefault();},{passive:false});"
+                  "canvas.addEventListener('touchend',()=>{drawing=false;});"
+                  "function clearCanvas(){fetch('/api/draw?clear=1').then(()=>{board.forEach(c=>c.fill(0));initBoard();});}"
+                  "function saveCanvas(){fetch('/api/draw?save=1').then(()=>alert('Saved to Flash! 🏮'));}"
                   "let playlist = " + playlistJson + ";"
-                  "function render() {"
-                  "  const list = document.getElementById('msgList'); list.innerHTML = '';"
-                  "  playlist.forEach((m, i) => {"
-                  "    list.innerHTML += `<div class='list-item'><span>${m}</span><button type='button' class='del-btn' onclick='delMsg(${i})'>&times;</button></div>`;"
+                  "function render(){"
+                  "  const l=document.getElementById('msgList');l.innerHTML='';playlist.forEach((m,i)=>{"
+                  "    l.innerHTML+=`<div class='list-item'><span>${m}</span><button type='button' class='del-btn' onclick='delMsg(${i})'>&times;</button></div>`;"
                   "  });"
-                  "  document.getElementById('msgsInput').value = playlist.join('|');"
+                  "  document.getElementById('msgsInput').value=playlist.join('|');"
                   "}"
-                  "function addMsg() {"
-                  "  const input = document.getElementById('newMsg'); if(input.value) { playlist.push(input.value); input.value = ''; render(); }"
-                  "}"
-                  "function delMsg(i) { playlist.splice(i, 1); render(); }"
-                  "document.getElementById('newMsg').addEventListener('keypress', (e) => { if(e.key === 'Enter') { e.preventDefault(); addMsg(); } });"
-                  "initBoard(); render();"
+                  "function addMsg(){const i=document.getElementById('newMsg');if(i.value){playlist.push(i.value);i.value='';render();}}"
+                  "function delMsg(i){playlist.splice(i,1);render();}"
+                  "document.getElementById('newMsg').addEventListener('keypress',(e)=>{if(e.key==='Enter'){e.preventDefault();addMsg();}});"
+                  "window.addEventListener('load',()=>{loadGallery();initBoard();render();});"
                   "</script></body></html>";
     request->send(200, "text/html", html);
   });
@@ -422,12 +422,10 @@ void setup() {
         if (x >= 0 && x < 84 && y >= 0 && y < 16) {
             if (on) drawBoard[x] |= (1 << y);
             else drawBoard[x] &= ~(1 << y);
-            // Instant feedback: jump to drawing screen (masterIdx 5)
             static uint32_t lastApiUpdate = 0;
-            if (millis() - lastApiUpdate > 500) { // Throttle re-renders and saves
+            if (millis() - lastApiUpdate > 500) { 
                 lastApiUpdate = millis();
                 forceRefresh = true;
-                // We'll let loop() pick it up
             }
         }
         request->send(200, "text/plain", "OK");
@@ -436,6 +434,76 @@ void setup() {
         request->send(200, "text/plain", "Saved");
     } else {
         request->send(400, "text/plain", "Bad Request");
+    }
+  });
+
+  server.on("/api/boards/list", HTTP_GET, [](AsyncWebServerRequest *request){
+    String json = "[";
+    File root = LittleFS.open("/boards");
+    if (!root || !root.isDirectory()) {
+        LittleFS.mkdir("/boards");
+        root = LittleFS.open("/boards");
+    }
+    File file = root.openNextFile();
+    bool first = true;
+    while(file) {
+        String name = String(file.name());
+        if (name.endsWith(".bin")) {
+            if (!first) json += ",";
+            json += "\"" + name.substring(0, name.length() - 4) + "\"";
+            first = false;
+        }
+        file = root.openNextFile();
+    }
+    json += "]";
+    request->send(200, "application/json", json);
+  });
+
+  server.on("/api/boards/save", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("name")) {
+        String name = request->getParam("name")->value();
+        name.replace(" ", "_");
+        File f = LittleFS.open("/boards/" + name + ".bin", "w");
+        if (f) {
+            f.write((uint8_t*)drawBoard, sizeof(drawBoard));
+            f.close();
+            request->send(200, "text/plain", "Saved " + name);
+        } else {
+            request->send(500, "text/plain", "Error opening file");
+        }
+    } else {
+        request->send(400, "text/plain", "Missing name");
+    }
+  });
+
+  server.on("/api/boards/load", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("name")) {
+        String name = request->getParam("name")->value();
+        File f = LittleFS.open("/boards/" + name + ".bin", "r");
+        if (f) {
+            f.read((uint8_t*)drawBoard, sizeof(drawBoard));
+            f.close();
+            saveConfig();
+            forceRefresh = true;
+            request->send(200, "text/plain", "Loaded " + name);
+        } else {
+            request->send(404, "text/plain", "Not found");
+        }
+    } else {
+        request->send(400, "text/plain", "Missing name");
+    }
+  });
+
+  server.on("/api/boards/delete", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("name")) {
+        String name = request->getParam("name")->value();
+        if (LittleFS.remove("/boards/" + name + ".bin")) {
+            request->send(200, "text/plain", "Deleted");
+        } else {
+            request->send(500, "text/plain", "Error deleting");
+        }
+    } else {
+        request->send(400, "text/plain", "Missing name");
     }
   });
 
