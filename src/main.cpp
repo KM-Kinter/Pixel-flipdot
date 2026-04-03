@@ -211,7 +211,11 @@ void setup() {
   forceRefresh = true;
 
   server.on("/timer", HTTP_GET, [](AsyncWebServerRequest *request){
-    if(request->hasParam("m")) timerTarget = millis() + request->getParam("m")->value().toInt() * 60000;
+    uint32_t ms = 0;
+    if(request->hasParam("h")) ms += request->getParam("h")->value().toInt() * 3600000;
+    if(request->hasParam("m")) ms += request->getParam("m")->value().toInt() * 60000;
+    if(request->hasParam("s")) ms += request->getParam("s")->value().toInt() * 1000;
+    timerTarget = millis() + ms;
     if(request->hasParam("msg")) timerMsg = request->getParam("msg")->value();
     timerRunning = true; timerPhase = 0; request->send(200, "text/plain", "OK");
   });
@@ -327,24 +331,28 @@ void setup() {
                   "  </div>"
                   " </div>"
                   
-                  " <div class='section-title'>Message Editor</div>"
-                  " <div class='msg-card'>"
-                  "  <div id='msgList'></div>"
-                  "  <div style='margin-top:20px; display:flex; gap:10px;'>"
+                  " <div style='display:flex; flex-wrap:wrap; gap:20px; width:100%;'>"
+                  "  <div class='msg-card' style='flex:1.2; min-width:300px; margin:0;'>"
+                  "   <div class='section-title' style='margin-top:0'>Message Editor</div>"
+                  "   <div id='msgList'></div>"
+                  "   <div style='margin-top:20px; display:flex; gap:10px;'>"
                   "    <input type='text' id='newMsg' placeholder='Write something...' style='margin:0'>"
-                  "    <button type='button' class='btn btn-blue' onclick='addMsg()' style='width:120px'>ADD</button>"
+                  "    <button type='button' class='btn btn-blue' onclick='addMsg()' style='width:100px'>ADD</button>"
+                  "   </div>"
                   "  </div>"
-                  " </div>"
 
-                  " <div class='section-title'>Countdown Timer</div>"
-                  " <div class='speed-card' style='flex-direction:column; gap:12px; align-items:stretch;'>"
-                  "  <div style='display:flex; gap:10px;'>"
-                  "   <input type='number' id='tm' placeholder='Min' style='width:80px; margin:0;'>"
-                  "   <input type='text' id='tmsg' placeholder='Message (e.g. PIZZA!)' style='flex:1; margin:0;'>"
-                  "  </div>"
-                  "  <div style='display:grid; grid-template-columns: 1fr 120px; gap:10px;'>"
-                  "   <button type='button' class='btn btn-blue' onclick='stT()'>START TIMER</button>"
-                  "   <button type='button' class='btn btn-red' style='background:var(--red); color:white; border:none;' onclick='spT()'>STOP</button>"
+                  "  <div class='speed-card' style='flex:1; min-width:300px; margin:0; flex-direction:column; gap:12px; align-items:stretch;'>"
+                  "   <div class='section-title' style='margin-top:0'>Countdown Timer</div>"
+                  "   <div style='display:flex; gap:8px;'>"
+                  "    <input type='number' id='th' placeholder='H' style='width:60px; margin:0; text-align:center;'>"
+                  "    <input type='number' id='tm' placeholder='M' style='width:60px; margin:0; text-align:center;'>"
+                  "    <input type='number' id='ts' placeholder='S' style='width:60px; margin:0; text-align:center;'>"
+                  "    <input type='text' id='tmsg' placeholder='Message...' style='flex:1; margin:0;'>"
+                  "   </div>"
+                  "   <div style='display:grid; grid-template-columns: 1fr 100px; gap:10px;'>"
+                  "    <button type='button' class='btn btn-blue' onclick='stT()'>START TIMER</button>"
+                  "    <button type='button' class='btn btn-red' style='background:var(--red); color:white; border:none;' onclick='spT()'>STOP</button>"
+                  "   </div>"
                   "  </div>"
                   " </div>"
                   
@@ -420,7 +428,8 @@ void setup() {
                   "function delMsg(i){playlist.splice(i,1);render();}"
                   "document.getElementById('newMsg').addEventListener('keypress',(e)=>{if(e.key==='Enter'){e.preventDefault();addMsg();}});"
                   "function togglePower(){const n=! " + String(systemOn?"true":"false") + "; fetch('/api/power?on='+(n?1:0)).then(()=>location.reload());}"
-"function stT(){fetch('/timer?m='+document.getElementById('tm').value+'&msg='+encodeURIComponent(document.getElementById('tmsg').value)).then(()=>location.reload());}"
+"function stT(){const h=document.getElementById('th').value||0,m=document.getElementById('tm').value||0,s=document.getElementById('ts').value||0,msg=document.getElementById('tmsg').value;"
+"fetch(`/timer?h=${h}&m=${m}&s=${s}&msg=${encodeURIComponent(msg)}`).then(()=>location.reload());}"
 "function spT(){fetch('/timerStop').then(()=>location.reload());}"
 "window.addEventListener('load',()=>{loadGallery();initBoard();render();});"
                   "</script></body></html>";
@@ -602,7 +611,10 @@ void loop() {
     if (timerPhase == 0) { // Countdown
       if (now < timerTarget) {
         uint32_t rem = (timerTarget - now) / 1000;
-        char buf[10]; snprintf(buf, sizeof(buf), "%02d:%02d", rem/60, rem%60);
+        int h = rem / 3600; int m = (rem % 3600) / 60; int s = rem % 60;
+        char buf[12];
+        if (h > 0) snprintf(buf, sizeof(buf), "%02d:%02d:%02d", h, m, s);
+        else snprintf(buf, sizeof(buf), "%02d:%02d", m, s);
         u8g2_gfx.setFont(FONT_CLOCK); drawUTF8Centered(buf, 16);
       } else {
         timerPhase = 1; timerTarget = now + 180000; // 3 minutes
@@ -610,7 +622,7 @@ void loop() {
       }
     } else { // Message phase
       if (now < timerTarget) {
-        u8g2_gfx.setFont(FONT_TEXT); drawUTF8Centered(timerMsg != "" ? timerMsg : "TIME'S UP!", 12);
+        u8g2_gfx.setFont(FONT_TEXT); drawUTF8Centered(timerMsg != "" ? timerMsg : "TIME'S UP!", 14); // Standard Y=14
       } else {
         timerRunning = false; timerPhase = 0; forceRefresh = true;
       }
