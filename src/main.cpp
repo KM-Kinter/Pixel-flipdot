@@ -242,7 +242,7 @@ void setup() {
     String html = f.readString();
     f.close();
 
-    html.replace("{{VERSION}}", "5.5");
+    html.replace("{{VERSION}}", "6.0");
     html.replace("{{PWR_CHK}}", systemOn ? "checked" : "");
     html.replace("{{PWR_STATE}}", systemOn ? "false" : "true");
     html.replace("{{C1_ACT}}", showClock ? "active" : "");
