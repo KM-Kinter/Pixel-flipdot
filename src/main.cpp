@@ -360,8 +360,13 @@ void setup() {
                   
                   " <div class='section-title'>General Settings</div>"
                   " <div class='speed-card'>"
-                  "  <span style='font-weight:600'>Rotation speed (seconds):</span>"
-                  "  <input type='number' name='speed' value='" + String(rotationSpeed) + "' style='width:100px;margin:0;text-align:center;'>"
+                  "  <span style='font-weight:600'>Rotation speed:</span>"
+                  "  <div style='display:flex; gap:8px;'>"
+                  "   <input type='number' id='sh' placeholder='H' style='width:60px; margin:0; text-align:center;'>"
+                  "   <input type='number' id='sm' placeholder='M' style='width:60px; margin:0; text-align:center;'>"
+                  "   <input type='number' id='ss' placeholder='S' style='width:60px; margin:0; text-align:center;'>"
+                  "  </div>"
+                  "  <input type='hidden' name='speed' id='totalSpeed'>"
                   " </div>"
 
                   " <input type='hidden' name='msgs' id='msgsInput'>"
@@ -374,7 +379,8 @@ void setup() {
                   "</div>"
 
                   "<script>"
-                  "function toggleTile(el) { el.classList.toggle('active'); const cb = el.querySelector('input'); cb.checked = !cb.checked; document.getElementById('mainForm').submit(); }"
+                  "function updateSpeed(){const h=document.getElementById('sh').value||0,m=document.getElementById('sm').value||0,s=document.getElementById('ss').value||0; document.getElementById('totalSpeed').value = parseInt(h)*3600 + parseInt(m)*60 + parseInt(s);}"
+                  "function toggleTile(el) { el.classList.toggle('active'); const cb = el.querySelector('input'); cb.checked = !cb.checked; updateSpeed(); document.getElementById('mainForm').submit(); }"
                   "const TRASH_SVG = `<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18'/><path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6'/><path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2'/></svg>`;"
                   "const canvas = document.getElementById('paintCanvas');"
                   "const ctx = canvas.getContext('2d');"
@@ -434,7 +440,8 @@ void setup() {
 "function stT(){const h=document.getElementById('th').value||0,m=document.getElementById('tm').value||0,s=document.getElementById('ts').value||0,msg=document.getElementById('tmsg').value;"
 "fetch(`/timer?h=${h}&m=${m}&s=${s}&msg=${encodeURIComponent(msg)}`).then(()=>location.reload());}"
 "function spT(){fetch('/timerStop').then(()=>location.reload());}"
-"window.addEventListener('load',()=>{loadGallery();initBoard();render();});"
+"window.addEventListener('load',()=>{loadGallery();initBoard();render();"
+"const rs="+String(rotationSpeed)+"; document.getElementById('sh').value=Math.floor(rs/3600)||''; document.getElementById('sm').value=Math.floor((rs%3600)/60)||''; document.getElementById('ss').value=(rs%60)||'';});"
                   "</script></body></html>";
     request->send(200, "text/html", html);
   });
