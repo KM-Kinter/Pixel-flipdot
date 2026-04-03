@@ -186,8 +186,8 @@ void setup() {
   if(!LittleFS.begin(true)){
     Serial.println("LittleFS FAILED");
   } else {
+    DEBUG_PRINTLN("LittleFS Mount OK");
     loadConfig();
-    DEBUG_PRINTLN("LittleFS OK");
   }
 
   Pixel_GFX.init();
@@ -216,6 +216,7 @@ void setup() {
   // Setup MDNS
   if (MDNS.begin("flipdot")) {
     DEBUG_PRINTLN("MDNS responder started: flipdot.local");
+    MDNS.addService("http", "tcp", 80);
   }
 
   timeClient.begin();
@@ -236,47 +237,49 @@ void setup() {
     timerRunning = false; request->send(200, "text/plain", "OK");
   });
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    auto processor = [](const String& var) -> String {
-      if(var == "VERSION") return "5.5";
-      if(var == "PWR_CHK") return systemOn ? "checked" : "";
-      if(var == "PWR_STATE") return systemOn ? "false" : "true";
-      if(var == "C1_ACT") return showClock ? "active" : "";
-      if(var == "C1_CHK") return showClock ? "checked" : "";
-      if(var == "C2_ACT") return showDate ? "active" : "";
-      if(var == "C2_CHK") return showDate ? "checked" : "";
-      if(var == "C3_ACT") return showCustom ? "active" : "";
-      if(var == "C3_CHK") return showCustom ? "checked" : "";
-      if(var == "C4_ACT") return showWeather ? "active" : "";
-      if(var == "C4_CHK") return showWeather ? "checked" : "";
-      if(var == "C5_ACT") return showAnalogClock ? "active" : "";
-      if(var == "C5_CHK") return showAnalogClock ? "checked" : "";
-      if(var == "C6_ACT") return showCombine ? "active" : "";
-      if(var == "C6_CHK") return showCombine ? "checked" : "";
-      if(var == "C7_ACT") return showDrawing ? "active" : "";
-      if(var == "C7_CHK") return showDrawing ? "checked" : "";
-      if(var == "C8_ACT") return showNightMode ? "active" : "";
-      if(var == "C8_CHK") return showNightMode ? "checked" : "";
-      
-      if(var == "BOARD_DATA") {
-        String d = "[";
-        for(int i=0; i<84; i++) d += String(drawBoard[i]) + (i==83?"":",");
-        d += "]";
-        return d;
-      }
-      if(var == "PLAYLIST_DATA") {
-        String playlistJson = "[";
-        for (size_t i=0; i<playlist.size(); i++) {
-            String s = playlist[i];
-            s.replace("\"", "\\\"");
-            playlistJson += "\"" + s + "\"" + (i == playlist.size()-1 ? "" : ",");
-        }
-        playlistJson += "]";
-        return playlistJson;
-      }
-      if(var == "ROTATION_SPEED") return String(rotationSpeed);
-      return String();
-    };
-    request->send(LittleFS, "/index.html", String(), false, processor);
+    File f = LittleFS.open("/index.html", "r");
+    if(!f) { request->send(404, "text/plain", "File not found"); return; }
+    String html = f.readString();
+    f.close();
+
+    html.replace("{{VERSION}}", "5.5");
+    html.replace("{{PWR_CHK}}", systemOn ? "checked" : "");
+    html.replace("{{PWR_STATE}}", systemOn ? "false" : "true");
+    html.replace("{{C1_ACT}}", showClock ? "active" : "");
+    html.replace("{{C1_CHK}}", showClock ? "checked" : "");
+    html.replace("{{C2_ACT}}", showDate ? "active" : "");
+    html.replace("{{C2_CHK}}", showDate ? "checked" : "");
+    html.replace("{{C3_ACT}}", showCustom ? "active" : "");
+    html.replace("{{C3_CHK}}", showCustom ? "checked" : "");
+    html.replace("{{C4_ACT}}", showWeather ? "active" : "");
+    html.replace("{{C4_CHK}}", showWeather ? "checked" : "");
+    html.replace("{{C5_ACT}}", showAnalogClock ? "active" : "");
+    html.replace("{{C5_CHK}}", showAnalogClock ? "checked" : "");
+    html.replace("{{C6_ACT}}", showCombine ? "active" : "");
+    html.replace("{{C6_CHK}}", showCombine ? "checked" : "");
+    html.replace("{{C7_ACT}}", showDrawing ? "active" : "");
+    html.replace("{{C7_CHK}}", showDrawing ? "checked" : "");
+    html.replace("{{C8_ACT}}", showNightMode ? "active" : "");
+    html.replace("{{C8_CHK}}", showNightMode ? "checked" : "");
+    
+    // Board Data
+    String bd = "[";
+    for(int i=0; i<84; i++) bd += String(drawBoard[i]) + (i==83?"":",");
+    bd += "]";
+    html.replace("{{BOARD_DATA}}", bd);
+
+    // Playlist Data
+    String pl = "[";
+    for (size_t i=0; i<playlist.size(); i++) {
+        String s = playlist[i];
+        s.replace("\"", "\\\"");
+        pl += "\"" + s + "\"" + (i == playlist.size()-1 ? "" : ",");
+    }
+    pl += "]";
+    html.replace("{{PLAYLIST_DATA}}", pl);
+    html.replace("{{ROTATION_SPEED}}", String(rotationSpeed));
+
+    request->send(200, "text/html", html);
   });
 
   server.on("/save", HTTP_POST, [](AsyncWebServerRequest *request){

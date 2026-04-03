@@ -46,30 +46,30 @@ input:checked+.slider{background:rgba(63,185,80,0.2);border-color:#3fb950;}input
   <h1 style="text-align:left;margin:0;">Smart Flipdot</h1>
   <div style="display:flex;align-items:center;gap:6px;">
     <span style="font-size:0.8em;color:var(--sub);font-weight:bold;">OFF</span>
-    <label class="switch"><input type="checkbox" id="pwr" %PWR_CHK% onclick="togglePower()"><span class="slider"></span></label>
+    <label class="switch"><input type="checkbox" id="pwr" {{PWR_CHK}} onclick="togglePower()"><span class="slider"></span></label>
     <span style="font-size:0.8em;color:var(--sub);font-weight:bold;">ON</span>
   </div>
  </div>
- <div class="subtitle" style="text-align:left;">Pixel v%VERSION% | <a href="http://flipdot.local">flipdot.local</a></div>
+ <div class="subtitle" style="text-align:left;">Pixel v{{VERSION}} | <a href="http://flipdot.local">flipdot.local</a></div>
  <form action="/save" method="POST" id="mainForm">
  <div class="section-title">Control Panel</div>
  <div class="tile-grid">
-  <div class="tile %C1_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="2.5"/><path d="M12 7v5l4 2" stroke-width="2.5"/><path d="M12 2v2M12 20v2M20 12h2M2 12h2" stroke-width="1.5"/></svg></div><span class="label">Digital</span><input type="checkbox" name="c1" %C1_CHK%></div>
-  <div class="tile %C5_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="2.5"/><path d="M12 7v5l4 2" stroke-width="2.5"/><path d="M12 2v2M12 20v2M20 12h2M2 12h2" stroke-width="1.5"/></svg></div><span class="label">Analog</span><input type="checkbox" name="c5" %C5_CHK%></div>
-  <div class="tile %C6_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="2.5"/><path d="M12 7v5l4 2" stroke-width="2.5"/><path d="M12 2v2M12 20v2M20 12h2M2 12h2" stroke-width="1.5"/></svg></div><span class="label">Combine</span><input type="checkbox" name="c6" %C6_CHK%></div>
-  <div class="tile %C7_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l5 5"/><circle cx="12" cy="12" r="1"/></svg></div><span class="label">Drawing</span><input type="checkbox" name="c7" %C7_CHK%></div>
-  <div class="tile %C2_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><span class="label">Date</span><input type="checkbox" name="c2" %C2_CHK%></div>
-  <div class="tile %C4_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg></div><span class="label">Weather</span><input type="checkbox" name="c4" %C4_CHK%></div>
-  <div class="tile %C3_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><span class="label">Messages</span><input type="checkbox" name="c3" %C3_CHK%></div>
-  <div class="tile %C8_ACT%" onclick="toggleTile(this)">
-    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div><span class="label">Night Mode</span><input type="checkbox" name="c8" %C8_CHK%></div>
+   <div class="tile {{C1_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="2.5"/><path d="M12 7v5l4 2" stroke-width="2.5"/><path d="M12 2v2M12 20v2M20 12h2M2 12h2" stroke-width="1.5"/></svg></div><span class="label">Digital</span><input type="checkbox" name="c1" {{C1_CHK}}></div>
+   <div class="tile {{C5_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="2.5"/><path d="M12 7v5l4 2" stroke-width="2.5"/><path d="M12 2v2M12 20v2M20 12h2M2 12h2" stroke-width="1.5"/></svg></div><span class="label">Analog</span><input type="checkbox" name="c5" {{C5_CHK}}></div>
+   <div class="tile {{C6_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="2.5"/><path d="M12 7v5l4 2" stroke-width="2.5"/><path d="M12 2v2M12 20v2M20 12h2M2 12h2" stroke-width="1.5"/></svg></div><span class="label">Combine</span><input type="checkbox" name="c6" {{C6_CHK}}></div>
+   <div class="tile {{C7_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l5 5"/><circle cx="12" cy="12" r="1"/></svg></div><span class="label">Drawing</span><input type="checkbox" name="c7" {{C7_CHK}}></div>
+   <div class="tile {{C2_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><span class="label">Date</span><input type="checkbox" name="c2" {{C2_CHK}}></div>
+   <div class="tile {{C4_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg></div><span class="label">Weather</span><input type="checkbox" name="c4" {{C4_CHK}}></div>
+   <div class="tile {{C3_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><span class="label">Messages</span><input type="checkbox" name="c3" {{C3_CHK}}></div>
+   <div class="tile {{C8_ACT}}" onclick="toggleTile(this)">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div><span class="label">Night Mode</span><input type="checkbox" name="c8" {{C8_CHK}}></div>
  </div>
  <div class="section-title">Drawing Board</div>
  <div class="board-card">
@@ -135,7 +135,7 @@ const canvas = document.getElementById('paintCanvas');
 const ctx = canvas.getContext('2d');
 const W = 84, H = 16, SCALE = 10;
 let drawing = false; let lastX = -1, lastY = -1; let tool = 1;
-let boardRaw = %BOARD_DATA%;
+let boardRaw = {{BOARD_DATA}};
 let board = Array(W).fill(0).map((_, x) => Array(H).fill(0).map((_, y) => (boardRaw[x] & (1 << y)) ? 1 : 0));
 function initBoard() {
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,840,160); ctx.strokeStyle = '#111'; ctx.lineWidth=0.5;
@@ -171,7 +171,7 @@ canvas.addEventListener('touchmove',(e)=>{handleMove(e);e.preventDefault();},{pa
 canvas.addEventListener('touchend',()=>{drawing=false;});
 function clearCanvas(){fetch('/api/draw?clear=1').then(()=>{board.forEach(c=>c.fill(0));initBoard();});}
 function saveCanvas(){fetch('/api/draw?save=1').then(()=>alert('Saved to Flash! 🏮'));}
-let playlist = %PLAYLIST_DATA%;
+let playlist = {{PLAYLIST_DATA}};
 function render(){
   const l=document.getElementById('msgList');l.innerHTML='';playlist.forEach((m,i)=>{
     l.innerHTML+=`<div class='list-item'><span>${m}</span><button type='button' class='btn-trash' onclick='delMsg(${i})' style='width:36px;height:36px;'>${TRASH_SVG}</button></div>`;
@@ -181,10 +181,10 @@ function render(){
 function addMsg(){const i=document.getElementById('newMsg');if(i.value){playlist.push(i.value);i.value='';render();}}
 function delMsg(i){playlist.splice(i,1);render();}
 document.getElementById('newMsg').addEventListener('keypress',(e)=>{if(e.key==='Enter'){e.preventDefault();addMsg();}});
-function togglePower(){const n=%PWR_STATE%; fetch('/api/power?on='+(n?1:0)).then(()=>location.reload());}
+function togglePower(){const n={{PWR_STATE}}; fetch('/api/power?on='+(n?1:0)).then(()=>location.reload());}
 function stT(){const h=document.getElementById('th').value||0,m=document.getElementById('tm').value||0,s=document.getElementById('ts').value||0,msg=document.getElementById('tmsg').value;
 fetch(`/timer?h=${h}&m=${m}&s=${s}&msg=${encodeURIComponent(msg)}`).then(()=>location.reload());}
 function spT(){fetch('/timerStop').then(()=>location.reload());}
 window.addEventListener('load',()=>{loadGallery();initBoard();render();
-const rs=%ROTATION_SPEED%; document.getElementById('sh').value=Math.floor(rs/3600)||''; document.getElementById('sm').value=Math.floor((rs%3600)/60)||''; document.getElementById('ss').value=(rs%60)||'';});
+const rs={{ROTATION_SPEED}}; document.getElementById('sh').value=Math.floor(rs/3600)||''; document.getElementById('sm').value=Math.floor((rs%3600)/60)||''; document.getElementById('ss').value=(rs%60)||'';});
 </script></body></html>
