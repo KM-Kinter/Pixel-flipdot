@@ -8,14 +8,16 @@ A high-fidelity weather and clock display system for ESP32-controlled flipdot bo
     - **Digital**: Precise NTP-synced time.
     - **Analog**: Classic clock face rendering.
     - **Combine**: Hybrid mode (Analog left, Digital right).
-- **Interactive Drawing Board**: Real-time 84x16 `<canvas>` painting interface with Eraser tool and Flash persistence.
-- **Conway's Game of Life**: Cellular automation simulation with stagnation detection and automatic re-seeding. It's on a separate branch because it doesn't work well yet.
+- **Interactive Drawing Board**: Real-time 84x16 `<canvas>` painting interface with Eraser tool, **Save/Load gallery**, and Flash persistence.
+- **Conway's Game of Life**: Cellular automation simulation.
 - **Dynamic Calendar**: Automated date tracking.
-- **Real-time Weather**: Open-Meteo API integration with a custom library of 22 professional 16x16 weather icons.
-- **Message Editor**: Dynamic playlist for custom scrolling or fixed text messages.
-- **Web Dashboard**: Sleek, grid-based UI with SVG iconography and auto-submit controls.
+- **Real-time Weather**: Open-Meteo API integration with 22 professional 16x16 weather icons.
+- **Message Editor**: Dynamic playlist for custom scrolling messages.
+- **Web Dashboard**: Modern, responsive UI with SVG iconography, real-time board drawing, and manual template injection for maximum stability.
+- **OTA Updates**: Fully integrated **ElegantOTA** for wireless **Firmware** and **Filesystem** updates via `/update`.
+- **Memory Management**: Custom partition scheme (`min_spiffs`) provides 1.9MB for app logic and 192KB for **LittleFS** assets.
+- **Night Mode**: Automatic scheduling (22:00 - 05:00) with "Goodnight"/"Morning" states.
 - **Hardware Optimization**: ADC-safe random seed generation to prevent WiFi/ADC2 conflicts on ESP32.
-- **Day/Night Modes**: Dynamic icon mapping based on sun/moon status and wind speed.
 
 ## Hardware Requirements
 
@@ -61,6 +63,23 @@ A TTL-to-RS485 converter module is required to interface the ESP32 (3.3V logic) 
 | A              | White (A)    |
 | B              | Yellow (B)   |
 | GND            | Blue (GND)   |
+
+## Software & Deployment
+
+### Build Configuration (PlatformIO)
+The project defines two core environments in `platformio.ini`:
+- **`env:release`**: Optimized for performance and size (`-Os`). Minimal logging to preserve flash. **Default for daily use.**
+- **`env:debug`**: Full serial debug output.
+
+### Partitioning & Filesystem
+To support OTA and a large codebase, I use the `min_spiffs` partition scheme:
+- **App Slots**: 2 x 1.9MB (Supports A/B seamless updates).
+- **Filesystem**: **LittleFS** (192KB) for web assets, icons, and `config.txt`.
+
+### Wireless Updates (OTA)
+1. Build the target: `pio run -e release` (for firmware) or `pio run -e release -t buildfs` (for filesystem).
+2. Navigate to `http://flipdot.local/update` (or the device IP).
+3. Upload the resulting `.bin` file from the `.pio/build/release/` directory.
 
 ## Attributions
 
