@@ -282,6 +282,8 @@ void setup() {
     request->send(200, "text/html", html);
   });
 
+  server.serveStatic("/favicon.png", LittleFS, "/favicon.png");
+
   server.on("/save", HTTP_POST, [](AsyncWebServerRequest *request){
     showClock = request->hasParam("c1", true);
     showDate = request->hasParam("c2", true);
