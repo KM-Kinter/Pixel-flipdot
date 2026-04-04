@@ -64,22 +64,30 @@ A TTL-to-RS485 converter module is required to interface the ESP32 (3.3V logic) 
 | B              | Yellow (B)   |
 | GND            | Blue (GND)   |
 
-## Software & Deployment
+## Software & Configuration
 
-### Build Configuration (PlatformIO)
-The project defines two core environments in `platformio.ini`:
-- **`env:release`**: Optimized for performance and size (`-Os`). Minimal logging to preserve flash. **Default for daily use.**
-- **`env:debug`**: Full serial debug output.
-
-### Partitioning & Filesystem
-To support OTA and a large codebase, I use the `min_spiffs` partition scheme:
-- **App Slots**: 2 x 1.9MB (Supports A/B seamless updates).
-- **Filesystem**: **LittleFS** (192KB) for web assets, icons, and `config.txt`.
-
-### Wireless Updates (OTA)
-1. Build the target: `pio run -e release` (for firmware) or `pio run -e release -t buildfs` (for filesystem).
-2. Navigate to `http://flipdot.local/update` (or the device IP).
-3. Upload the resulting `.bin` file from the `.pio/build/release/` directory.
+1. **Install PlatformIO**: Add the PlatformIO extension to VS Code.
+2. **Secrets**: Create a file named `include/secrets.h` in the `include/` directory. This file is gitignored and should contain your MQTT credentials:
+   ```cpp
+   #ifndef SECRETS_H
+   #define SECRETS_H
+   #define MQTT_BROKER "YOUR_BROKER_IP"
+   #define MQTT_PORT 1883
+   #define MQTT_USER "YOUR_USER"
+   #define MQTT_PASS "YOUR_PASSWORD"
+   #define MQTT_CLIENT_ID "Flipdot-Pixel"
+   #endif
+   ```
+3. **Compilation**: Select the `release` environment in PlatformIO and click **Build**.
+4. **First-time Upload**: You must upload the LittleFS filesystem once:
+   ```bash
+   pio run -e release -t uploadfs
+   ```
+   Followed by the firmware:
+   ```bash
+   pio run -e release -t upload
+   ```
+5. **OTA (Wireless)**: Subsequent updates can be performed via the web portal: `http://[DEVICE_IP]/update` or `http://flipdot.local/update`.
 
 ## Attributions
 
