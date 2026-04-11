@@ -636,39 +636,70 @@ void loop() {
 
   if (morningRotate) currentInterval = 30000;
 
-  if (millis() - lastToggle > currentInterval || forceRefresh) {
-    lastToggle = millis();
+  static int lastMinute = -1;
+  bool minuteChanged = (lastMinute != -1 && lastMinute != m);
+  lastMinute = m;
+
+  static int rotatePart = 0;
+  bool shouldRotate = (millis() - lastToggle > currentInterval || forceRefresh);
+  bool shouldRedraw = shouldRotate;
+
+  if (!shouldRotate && minuteChanged) {
+      if (morningRotate && rotatePart == 1) {
+          shouldRedraw = true;
+      } else if (!morningRotate) {
+          if ((masterIdx == 0 && showClock) || 
+              (masterIdx == 3 && showAnalogClock) || 
+              (masterIdx == 4 && showCombine)) {
+              shouldRedraw = true;
+          }
+      }
+  }
+
+  if (shouldRedraw) {
+    if (shouldRotate) lastToggle = millis();
     forceRefresh = false;
 
     String toShow = "";
-    int attempts = 0;
-    while (attempts < 20) {
-        masterIdx = (masterIdx + 1) % (6 + playlist.size());
-        if (morningRotate) { 
-           static int rotatePart = 0;
-           rotatePart = (rotatePart + 1) % 4;
-           if (rotatePart == 0) { u8g2_gfx.setFont(FONT_TEXT); toShow = "Morning!"; break; }
-           if (rotatePart == 1) { u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; break; }
-           if (rotatePart == 2 && currentWeather.valid) { masterIdx = 2; break; } // Show Weather
-           if (rotatePart == 3) { u8g2_gfx.setFont(FONT_DATE); toShow = dateStr; break; }
-        }
-        
-        if (masterIdx == 0 && showClock) { u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; break; }
-        if (masterIdx == 1 && showDate) { u8g2_gfx.setFont(FONT_DATE); toShow = dateStr; break; }
-        if (masterIdx == 2 && showWeather && currentWeather.valid) break;
-        if (masterIdx == 3 && showAnalogClock) break;
-        if (masterIdx == 4 && showCombine) break;
-        if (masterIdx == 5 && showDrawing) break;
-        if (masterIdx >= 6 && showCustom) {
-            int pIdx = masterIdx - 6;
-            if (pIdx >= 0 && pIdx < (int)playlist.size()) { 
-                u8g2_gfx.setFont(FONT_TEXT); toShow = playlist[pIdx]; break; 
+    int renderMode = -1; // -1: string, 0: digital, 1: date, 2: weather, 3: analog, 4: combine, 5: draw
+
+    if (shouldRotate) {
+        int attempts = 0;
+        while (attempts < 20) {
+            if (morningRotate) { 
+               rotatePart = (rotatePart + 1) % 4;
+               if (rotatePart == 0) { renderMode = -1; u8g2_gfx.setFont(FONT_TEXT); toShow = "Morning!"; break; }
+               if (rotatePart == 1) { renderMode = 0; u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; break; }
+               if (rotatePart == 2 && currentWeather.valid) { renderMode = 2; break; } 
+               if (rotatePart == 3) { renderMode = 1; u8g2_gfx.setFont(FONT_DATE); toShow = dateStr; break; }
+            } else {
+                masterIdx = (masterIdx + 1) % (6 + playlist.size());
+                if (masterIdx == 0 && showClock) { renderMode = 0; u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; break; }
+                if (masterIdx == 1 && showDate) { renderMode = 1; u8g2_gfx.setFont(FONT_DATE); toShow = dateStr; break; }
+                if (masterIdx == 2 && showWeather && currentWeather.valid) { renderMode = 2; break; }
+                if (masterIdx == 3 && showAnalogClock) { renderMode = 3; break; }
+                if (masterIdx == 4 && showCombine) { renderMode = 4; break; }
+                if (masterIdx == 5 && showDrawing) { renderMode = 5; break; }
+                if (masterIdx >= 6 && showCustom) {
+                    int pIdx = masterIdx - 6;
+                    if (pIdx >= 0 && pIdx < (int)playlist.size()) { 
+                        renderMode = masterIdx; u8g2_gfx.setFont(FONT_TEXT); toShow = playlist[pIdx]; break; 
+                    }
+                }
             }
+            attempts++;
         }
-        attempts++;
+    } else {
+        if (morningRotate) {
+            if (rotatePart == 1) { renderMode = 0; u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; }
+        } else {
+            if (masterIdx == 0 && showClock) { renderMode = 0; u8g2_gfx.setFont(FONT_CLOCK); toShow = timeStr; }
+            else if (masterIdx == 3 && showAnalogClock) { renderMode = 3; }
+            else if (masterIdx == 4 && showCombine) { renderMode = 4; }
+        }
     }
 
-    if (masterIdx == 2 && showWeather && currentWeather.valid) {
+    if (renderMode == 2) {
         Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
         const uint8_t* icon = WeatherHelper::getIconForCode(currentWeather.code, currentWeather.is_day, currentWeather.wind_speed);
         Pixel_GFX.drawXBitmap(0, 0, icon, 16, 16, 1);
@@ -682,11 +713,11 @@ void loop() {
         Pixel_GFX.drawCircle(startX + wNum + 2, 3, 1, 1);
         u8g2_gfx.setCursor(startX + wNum + 5, 13); u8g2_gfx.print("C");
         Pixel_GFX.commitBufferToPage(0);
-    } else if (masterIdx == 3 && showAnalogClock) {
+    } else if (renderMode == 3) {
         Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
         drawAnalogClock(timeinfo->tm_hour, timeinfo->tm_min);
         Pixel_GFX.commitBufferToPage(0);
-    } else if (masterIdx == 4 && showCombine) {
+    } else if (renderMode == 4) {
         Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
         u8g2_gfx.setFont(FONT_CLOCK);
         int wDig = u8g2_gfx.getUTF8Width(timeStr);
@@ -694,7 +725,7 @@ void loop() {
         drawAnalogClock(timeinfo->tm_hour, timeinfo->tm_min, startX + 7, 8);
         u8g2_gfx.setCursor(startX + 18, 16); u8g2_gfx.print(timeStr);
         Pixel_GFX.commitBufferToPage(0);
-    } else if (masterIdx == 5 && showDrawing) {
+    } else if (renderMode == 5) {
         Pixel_GFX.selectBuffer(0); Pixel_GFX.fillScreen(0);
         for(int x=0; x<84; x++) for(int y=0; y<16; y++) if (drawBoard[x] & (1 << y)) Pixel_GFX.drawPixel(x, y, 1);
         Pixel_GFX.commitBufferToPage(0);
