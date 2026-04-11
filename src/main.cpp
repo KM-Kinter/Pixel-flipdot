@@ -170,7 +170,9 @@ WeatherData currentWeather = {0, 0, false};
 uint32_t lastWeatherUpdate = 0;
 
 // Fonts - maximum size for Clock/Date and minimal for Text
-#define FONT_TEXT u8g2_font_unifont_t_polish    // Supports Polish
+#define FONT_TEXT u8g2_font_helvR08_te    // Supports Polish
+// u8g2_font_6x12_te is cool for text and supports polish characters but it's too wide comparing to u8g2_font_helvR08_te
+// u8g2_font_helvR08_te or 10_te supports polish characters
 #define FONT_CLOCK u8g2_font_logisoso16_tn      // Large, 16px high numbers
 #define FONT_DATE u8g2_font_logisoso16_tf       // Large, 16px high proportional
 
